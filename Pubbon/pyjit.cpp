@@ -24,14 +24,16 @@
   #define MOD_INIT_EXEC(name) init##name();
 #endif
 
+static Py_ssize_t coIdx;
+
 PyObject *Jit_EvalHelper(void *state, PyFrameObject *frame) {
     return _PyEval_EvalFrameDefault(frame, 0);
 }
 
 PubbonJittedCode *jittedcode_new_direct() {
     PubbonJittedCode *new_ob = PyObject_New(PubbonJittedCode, &PubbonJittedCode_Type);
+//    PubbonJittedCode *new_ob = (PubbonJittedCode *)PubbonJittedCode_Type.tp_alloc(&PubbonJittedCode_Type, 0);
     assert(new_ob != nullptr);
-    
     new_ob->j_run_count = 0;
     new_ob->j_failed = false;
     new_ob->j_evalfunc = nullptr;
@@ -65,7 +67,9 @@ bool jit_compile(PyCodeObject *code) {
         return false;
     }
 
-    PubbonJittedCode *jittedCode = (PubbonJittedCode *)code->co_extra;
+    PyObject *extra = nullptr;
+    _PyCode_GetExtra((PyObject *)code, coIdx, &(void *)extra);
+    PubbonJittedCode *jittedCode = (PubbonJittedCode *)extra;
 
     jittedCode->j_evalfunc = &Jit_EvalHelper;
     jittedCode->j_evalstate = nullptr;
@@ -79,15 +83,17 @@ PyObject*
 eval_frame(PyFrameObject *frame, int throwflag) {
     printf("** myjit is evaluating frame=%p lasti=%d lineno=%d throwflag=%d\n",
            frame, frame->f_lasti, frame->f_lineno, throwflag);
-    if (frame->f_code->co_extra == nullptr) {
+    PyObject *extra = nullptr;
+    _PyCode_GetExtra((PyObject *)frame->f_code, coIdx, &(void *)extra);
+    if (extra == nullptr) {
         PubbonJittedCode *jitted = jittedcode_new_direct();
         assert(jitted != nullptr);
-        
-        frame->f_code->co_extra = (PyObject *)jitted;
+        _PyCode_SetExtra((PyObject *)frame->f_code, coIdx, (PyObject *)jitted);
         jitted->j_run_count++;
         printf("jitted run_count: %llu\n", jitted->j_run_count);
-    } else if (!throwflag) {
-        PubbonJittedCode *jitted = (PubbonJittedCode *)frame->f_code->co_extra;
+    }
+    else if (!throwflag) {
+        PubbonJittedCode *jitted = (PubbonJittedCode *)extra;
         if (Py_TYPE(jitted) == &PubbonJittedCode_Type && !jitted->j_failed) {
             if (jitted->j_evalfunc != nullptr) {
                 return jitted->j_evalfunc(jitted->j_evalstate, frame);
@@ -159,9 +165,12 @@ PyTypeObject PubbonJittedCode_Type = {
 
 MOD_INIT(pyjit) {
     PyObject *m;
+    if (PyType_Ready(&PubbonJittedCode_Type) < 0)
+        return MOD_ERROR_VAL;
     MOD_DEF(m, "pyjit", "No docs", ext_methods)
     if (m == NULL)
         return MOD_ERROR_VAL;
-
+    Py_INCREF(&PubbonJittedCode_Type);
+    coIdx = _PyEval_RequestCodeExtraIndex((freefunc)jittedcode_dealloc);
     return MOD_SUCCESS_VAL(m);
 }
