@@ -54,7 +54,8 @@ jittedcode_new(PyTypeObject *type, PyObject *args, PyObject *kwargs) {
 }
 
 void PubbonJitFree(PubbonJittedCode *function) {
-    return;
+    //TODO: maybe need Py_XDECREF(function->j_evalstate)
+    Py_TYPE(function)->tp_free((PyObject *)function);
 }
 
 static void
