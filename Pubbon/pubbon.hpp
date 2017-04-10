@@ -1,11 +1,12 @@
-#ifndef PYJIT_H
-#define PYJIT_H
+#ifndef PUBBON_HPP
+#define PUBBON_HPP
 
 extern PyTypeObject PubbonJittedCode_Type;
 
-typedef PyObject* (*Py_EvalFunc)(void*, struct _frame*);
+typedef PyObject * (*Py_EvalFunc)(void *, struct _frame *);
 
-struct PubbonJittedCode {
+struct PubbonJittedCode
+{
     PyObject_HEAD
     PY_UINT64_T j_run_count;
     bool j_failed;
@@ -16,4 +17,4 @@ struct PubbonJittedCode {
 
 PubbonJittedCode *jittedcode_new_direct();
 
-#endif // PYJIT_H
+#endif // PuBBON_HPP

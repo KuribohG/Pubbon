@@ -6,8 +6,8 @@ metadata = dict(
         'pubbon',
     },
     ext_modules=[
-        Extension(name='pubbon.pyjit',
-                  sources=['Pubbon/pyjit.cpp'])
+        Extension(name='pubbon',
+                  sources=['Pubbon/pubbon.cpp'])
     ],
     license='BSD',
 )
