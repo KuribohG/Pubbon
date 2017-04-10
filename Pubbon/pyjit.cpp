@@ -68,7 +68,7 @@ bool jit_compile(PyCodeObject *code) {
     }
 
     PyObject *extra = nullptr;
-    _PyCode_GetExtra((PyObject *)code, coIdx, &(void *)extra);
+    _PyCode_GetExtra((PyObject *)code, coIdx, (void **)&extra);
     PubbonJittedCode *jittedCode = (PubbonJittedCode *)extra;
 
     jittedCode->j_evalfunc = &Jit_EvalHelper;
@@ -77,14 +77,14 @@ bool jit_compile(PyCodeObject *code) {
     return true;
 }
 
-static PY_UINT64_T HOT_CODE = 0;
+static PY_UINT64_T HOT_CODE = 1000;
 
 PyObject*
 eval_frame(PyFrameObject *frame, int throwflag) {
     printf("** myjit is evaluating frame=%p lasti=%d lineno=%d throwflag=%d\n",
            frame, frame->f_lasti, frame->f_lineno, throwflag);
     PyObject *extra = nullptr;
-    _PyCode_GetExtra((PyObject *)frame->f_code, coIdx, &(void *)extra);
+    _PyCode_GetExtra((PyObject *)frame->f_code, coIdx, (void **)&extra);
     if (extra == nullptr) {
         PubbonJittedCode *jitted = jittedcode_new_direct();
         assert(jitted != nullptr);
