@@ -1,12 +1,15 @@
 #include <Python.h>
 #include <frameobject.h>
 #include <cassert>
+#include "llvm_env.hpp"
+#include "translate.hpp"
 #include "pubbon.hpp"
 
 static Py_ssize_t coIdx;
 
-PyObject *Jit_EvalHelper(void *state, PyFrameObject *frame)
+PyObject *Jit_EvalHelper(std::string state, PyFrameObject *frame)
 {
+    
 	return _PyEval_EvalFrameDefault(frame, 0);
 }
 
@@ -49,8 +52,10 @@ bool jit_compile(PyCodeObject *code)
 	PyObject *extra = nullptr;
 	_PyCode_GetExtra((PyObject *)code, coIdx, (void **)&extra);
 	PubbonJittedCode *jittedCode = (PubbonJittedCode *)extra;
+
+    translate(code);
 	jittedCode->j_evalfunc = &Jit_EvalHelper;
-	jittedCode->j_evalstate = nullptr;
+	jittedCode->j_evalstate = std::string("name");
 	return true;
 }
 
