@@ -55,7 +55,7 @@ bool jit_compile(PyCodeObject *code)
 
     translate(code);
 	jittedCode->j_evalfunc = &Jit_EvalHelper;
-	jittedCode->j_evalstate = std::string("name");
+	jittedCode->j_evalstate = "name";//warning
 	return true;
 }
 

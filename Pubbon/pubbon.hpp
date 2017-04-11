@@ -1,8 +1,6 @@
 #ifndef PUBBON_HPP
 #define PUBBON_HPP
 
-#include <string>
-
 extern PyTypeObject PubbonJittedCode_Type;
 
 typedef PyObject * (*Py_EvalFunc)(std::string, struct _frame *);
@@ -13,7 +11,7 @@ struct PubbonJittedCode
     PY_UINT64_T j_run_count;
     bool j_failed;
     Py_EvalFunc j_evalfunc;
-    std::string j_evalstate;
+    char* j_evalstate;
     PY_UINT64_T j_specialization_threshold;
 };
 
