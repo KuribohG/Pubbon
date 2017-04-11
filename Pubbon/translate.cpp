@@ -3,6 +3,19 @@
 #include <string>
 #include <vector>
 
+using namespace llvm;
+using namespace llvm::orc;
+
+LLVMContext TheContext;
+IRBuilder<> Builder(TheContext);
+std::unique_ptr<Module> TheModule;
+std::unique_ptr<LlvmEnv> TheJIT;
+
+void InitializeModule() {
+    TheModule = std::make_unique<Module>("pyjit", TheContext);
+    TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
+}
+
 Function *getFunction(std::string Name) {
     if (auto *F = TheModule->getFunction(Name))
         return F;

@@ -3,7 +3,8 @@ from os import popen
 
 cxxflags = popen('llvm-config --cxxflags').readline().split()
 ldflags = popen('llvm-config --ldflags').readline().split()
-libs = popen('llvm-config --libs all').readline().split()
+libs = popen('llvm-config --libs all').readline().split()\
+     + popen('llvm-config --system-libs').readline().split()
 
 metadata = dict(
     name='pubbon',

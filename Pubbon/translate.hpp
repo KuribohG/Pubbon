@@ -22,19 +22,6 @@
 
 #include "llvm_env.hpp"
 
-using namespace llvm;
-using namespace llvm::orc;
-
-LLVMContext TheContext;
-IRBuilder<> Builder(TheContext);
-std::unique_ptr<Module> TheModule;
-std::unique_ptr<LlvmEnv> TheJIT;
-
-void InitializeModule() {
-    TheModule = std::make_unique<Module>("pyjit", TheContext);
-    TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
-}
-
 void translate(PyCodeObject *code);
 
 #endif
