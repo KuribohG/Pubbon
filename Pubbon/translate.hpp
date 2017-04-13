@@ -44,6 +44,18 @@ PyObject* BinarySubtract(PyObject *left, PyObject *right);
 
 PyObject* LoadAttr(PyObject *owner, PyObject *name);
 
+PyObject *BinaryLshift(PyObject *left, PyObject *right);
+
+PyObject *BinaryRshift(PyObject *left, PyObject *right);
+
+PyObject *BinaryAnd(PyObject *left, PyObject *right);
+
+PyObject *BinaryXor(PyObject *left, PyObject *right);
+
+PyObject *BinaryOr(PyObject *left, PyObject *right);
+
+PyObject *BinaryMatrixMultiply(PyObject *left, PyObject *right);
+
 void InitializeModule();
 
 void CompiletoIR(PyCodeObject *code);
