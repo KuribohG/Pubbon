@@ -11,9 +11,83 @@ IRBuilder<> Builder(TheContext);
 std::unique_ptr<Module> TheModule;
 std::unique_ptr<LlvmEnv> TheJIT;
 
+PyObject* BinaryAdd(PyObject *left, PyObject *right) {
+	PyObject *sum;
+	if (PyUnicode_CheckExact(left) && PyUnicode_CheckExact(right)) {
+		sum = PyUnicode_Concat(left, right);
+	}
+	else {
+		sum = PyNumber_Add(left, right);
+		Py_DECREF(left);
+	}
+    Py_DECREF(right);
+	return sum;
+}
+
+PyObject* BinarySubscr(PyObject *left, PyObject *right) {
+	auto res = PyObject_GetItem(left, right);
+	Py_DECREF(left);
+	Py_DECREF(right);
+	return res;
+}
+
+PyObject* BinaryMultiply(PyObject *left, PyObject *right) {
+	auto res = PyNumber_Multiply(left, right);
+	Py_DECREF(left);
+	Py_DECREF(right);
+	return res;
+}
+
+PyObject* BinaryTrueDivide(PyObject *left, PyObject *right) {
+	auto res = PyNumber_TrueDivide(left, right);
+	Py_DECREF(left);
+	Py_DECREF(right);
+	return res;
+}
+
+PyObject* BinaryFloorDivide(PyObject *left, PyObject *right) {
+	auto res = PyNumber_FloorDivide(left, right);
+	Py_DECREF(left);
+	Py_DECREF(right);
+	return res;
+}
+
+PyObject* BinaryPower(PyObject *left, PyObject *right) {
+	auto res = PyNumber_Power(left, right, Py_None);
+	Py_DECREF(left);
+	Py_DECREF(right);
+	return res;
+}
+
+PyObject* BinaryModulo(PyObject *left, PyObject *right) {
+	auto res = PyUnicode_CheckExact(left) ?
+		PyUnicode_Format(left, right) :
+		PyNumber_Remainder(left, right); 
+	
+	Py_DECREF(left);
+	Py_DECREF(right);
+	return res;
+}
+
+PyObject* BinarySubtract(PyObject *left, PyObject *right) {
+	auto res = PyNumber_Subtract(left, right);
+	Py_DECREF(left);
+	Py_DECREF(right);
+	return res;
+}
+
+PyObject* LoadAttr(PyObject *owner, PyObject *name) {
+	PyObject *res = PyObject_GetAttr(owner, name);
+	Py_DECREF(owner);
+	return res;
+}
+
 void InitializeModule() {
     TheModule = std::make_unique<Module>("pyjit", TheContext);
     TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
+}
+
+void CompiletoIR(PyCodeObject *code) {
 }
 
 Function *getFunction(std::string Name) {
@@ -24,9 +98,10 @@ Function *getFunction(std::string Name) {
 
 void translate(PyCodeObject *code) {
     InitializeModule();
-    std::string Name = "name";
-    std::vector<Type*> ArgTypes{Type::getDoubleTy(TheContext)};
-    Type* ResType = Type::getDoubleTy(TheContext);
+    CompiletoIR(code);
+    std::string Name = PyUnicode_AsUTF8(code->co_name);
+    std::vector<Type *> ArgTypes{Type::getDoubleTy(TheContext)};
+    Type *ResType = Type::getDoubleTy(TheContext);
     FunctionType *FT = FunctionType::get(ResType, ArgTypes, false);
     Function *F = Function::Create(FT, Function::ExternalLinkage, Name, TheModule.get());
 

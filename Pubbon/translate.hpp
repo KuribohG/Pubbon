@@ -1,7 +1,8 @@
 #ifndef TRANSLATE_H
 #define TRANSLATE_H
 
-#include <Python.h>
+#include <string>
+#include "Python.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
@@ -21,6 +22,33 @@
 #include "llvm/Transforms/Scalar/GVN.h"
 
 #include "llvm_env.hpp"
+
+using namespace llvm;
+using namespace llvm::orc;
+
+PyObject* BinaryAdd(PyObject *left, PyObject *right);
+
+PyObject* BinarySubscr(PyObject *left, PyObject *right);
+
+PyObject* BinaryMultiply(PyObject *left, PyObject *right);
+
+PyObject* BinaryTrueDivide(PyObject *left, PyObject *right);
+
+PyObject* BinaryFloorDivide(PyObject *left, PyObject *right);
+
+PyObject* BinaryPower(PyObject *left, PyObject *right);
+
+PyObject* BinaryModulo(PyObject *left, PyObject *right);
+
+PyObject* BinarySubtract(PyObject *left, PyObject *right);
+
+PyObject* LoadAttr(PyObject *owner, PyObject *name);
+
+void InitializeModule();
+
+void CompiletoIR(PyCodeObject *code);
+
+Function *getFunction(std::string Name);
 
 void translate(PyCodeObject *code);
 
