@@ -93,6 +93,9 @@ PyObject *eval_frame(PyFrameObject *frame, int throwflag)
 
 PyObject *install_jit(PyObject *self)
 {
+    llvm::InitializeNativeTarget();
+    llvm::InitializeNativeTargetAsmPrinter();
+    llvm::InitializeNativeTargetAsmParser();
 	PyThreadState *tstate = PyThreadState_GET();
 	tstate->interp->eval_frame = eval_frame;
 	Py_RETURN_NONE;
