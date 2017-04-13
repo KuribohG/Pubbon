@@ -77,41 +77,48 @@ PyObject *BinarySubtract(PyObject *left, PyObject *right) {
 }
 
 PyObject *LoadAttr(PyObject *owner, PyObject *name) {
-	PyObject *res = PyObject_GetAttr(owner, name);
+	auto res = PyObject_GetAttr(owner, name);
 	Py_DECREF(owner);
 	return res;
 }
 
 PyObject *BinaryLshift(PyObject *left, PyObject *right) {
-	PyObject *res = PyNumber_Lshift(left, right);
+	auto res = PyNumber_Lshift(left, right);
 	Py_DECREF(left);
 	Py_DECREF(right);
 	return res;
 }
 
 PyObject *BinaryRshift(PyObject *left, PyObject *right) {
-	PyObject *res = PyNumber_Rshift(left, right);
+	auto res = PyNumber_Rshift(left, right);
 	Py_DECREF(left);
 	Py_DECREF(right);
 	return res;
 }
 
 PyObject *BinaryAnd(PyObject *left, PyObject *right) {
-	PyObject *res = PyNumber_And(left, right);
+	auto res = PyNumber_And(left, right);
 	Py_DECREF(left);
 	Py_DECREF(right);
 	return res;
 }
 
 PyObject *BinaryXor(PyObject *left, PyObject *right) {
-	PyObject *res = PyNumber_Xor(left, right);
+	auto res = PyNumber_Xor(left, right);
 	Py_DECREF(left);
 	Py_DECREF(right);
 	return res;
 }
 
 PyObject *BinaryOr(PyObject *left, PyObject *right) {
-	PyObject *res = PyNumber_Or(left, right);
+	auto res = PyNumber_Or(left, right);
+	Py_DECREF(left);
+	Py_DECREF(right);
+	return res;
+}
+
+PyObject *BinaryMatrixMultiply(PyObject *left, PyObject *right) {
+	auto res = PyNumber_MatrixMultiply(left, right);
 	Py_DECREF(left);
 	Py_DECREF(right);
 	return res;
