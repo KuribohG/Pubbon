@@ -11,7 +11,7 @@ IRBuilder<> Builder(TheContext);
 std::unique_ptr<Module> TheModule;
 std::unique_ptr<LlvmEnv> TheJIT;
 
-PyObject* BinaryAdd(PyObject *left, PyObject *right) {
+PyObject *BinaryAdd(PyObject *left, PyObject *right) {
 	PyObject *sum;
 	if (PyUnicode_CheckExact(left) && PyUnicode_CheckExact(right)) {
 		sum = PyUnicode_Concat(left, right);
@@ -24,42 +24,42 @@ PyObject* BinaryAdd(PyObject *left, PyObject *right) {
 	return sum;
 }
 
-PyObject* BinarySubscr(PyObject *left, PyObject *right) {
+PyObject *BinarySubscr(PyObject *left, PyObject *right) {
 	auto res = PyObject_GetItem(left, right);
 	Py_DECREF(left);
 	Py_DECREF(right);
 	return res;
 }
 
-PyObject* BinaryMultiply(PyObject *left, PyObject *right) {
+PyObject *BinaryMultiply(PyObject *left, PyObject *right) {
 	auto res = PyNumber_Multiply(left, right);
 	Py_DECREF(left);
 	Py_DECREF(right);
 	return res;
 }
 
-PyObject* BinaryTrueDivide(PyObject *left, PyObject *right) {
+PyObject *BinaryTrueDivide(PyObject *left, PyObject *right) {
 	auto res = PyNumber_TrueDivide(left, right);
 	Py_DECREF(left);
 	Py_DECREF(right);
 	return res;
 }
 
-PyObject* BinaryFloorDivide(PyObject *left, PyObject *right) {
+PyObject *BinaryFloorDivide(PyObject *left, PyObject *right) {
 	auto res = PyNumber_FloorDivide(left, right);
 	Py_DECREF(left);
 	Py_DECREF(right);
 	return res;
 }
 
-PyObject* BinaryPower(PyObject *left, PyObject *right) {
+PyObject *BinaryPower(PyObject *left, PyObject *right) {
 	auto res = PyNumber_Power(left, right, Py_None);
 	Py_DECREF(left);
 	Py_DECREF(right);
 	return res;
 }
 
-PyObject* BinaryModulo(PyObject *left, PyObject *right) {
+PyObject *BinaryModulo(PyObject *left, PyObject *right) {
 	auto res = PyUnicode_CheckExact(left) ?
 		PyUnicode_Format(left, right) :
 		PyNumber_Remainder(left, right); 
@@ -69,16 +69,51 @@ PyObject* BinaryModulo(PyObject *left, PyObject *right) {
 	return res;
 }
 
-PyObject* BinarySubtract(PyObject *left, PyObject *right) {
+PyObject *BinarySubtract(PyObject *left, PyObject *right) {
 	auto res = PyNumber_Subtract(left, right);
 	Py_DECREF(left);
 	Py_DECREF(right);
 	return res;
 }
 
-PyObject* LoadAttr(PyObject *owner, PyObject *name) {
+PyObject *LoadAttr(PyObject *owner, PyObject *name) {
 	PyObject *res = PyObject_GetAttr(owner, name);
 	Py_DECREF(owner);
+	return res;
+}
+
+PyObject *BinaryLshift(PyObject *left, PyObject *right) {
+	PyObject *res = PyNumber_Lshift(left, right);
+	Py_DECREF(left);
+	Py_DECREF(right);
+	return res;
+}
+
+PyObject *BinaryRshift(PyObject *left, PyObject *right) {
+	PyObject *res = PyNumber_Rshift(left, right);
+	Py_DECREF(left);
+	Py_DECREF(right);
+	return res;
+}
+
+PyObject *BinaryAnd(PyObject *left, PyObject *right) {
+	PyObject *res = PyNumber_And(left, right);
+	Py_DECREF(left);
+	Py_DECREF(right);
+	return res;
+}
+
+PyObject *BinaryXor(PyObject *left, PyObject *right) {
+	PyObject *res = PyNumber_Xor(left, right);
+	Py_DECREF(left);
+	Py_DECREF(right);
+	return res;
+}
+
+PyObject *BinaryOr(PyObject *left, PyObject *right) {
+	PyObject *res = PyNumber_Or(left, right);
+	Py_DECREF(left);
+	Py_DECREF(right);
 	return res;
 }
 
