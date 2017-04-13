@@ -42,19 +42,19 @@ class LlvmEnv {
         TargetMachine &getTargetMachine() { return *TM; }
 
         ModuleHandle addModule(std::unique_ptr<Module> M) {
-			auto Resolver = createLambdaResolver(
-				[&](const std::string &Name) {
-				  if (auto Sym = CompileLayer.findSymbol(Name, false))
-					return Sym;
-				  return JITSymbol(nullptr);
-				},
-				[](const std::string &Name) {
-				  if (auto SymAddr =
-						RTDyldMemoryManager::getSymbolAddressInProcess(Name))
-					return JITSymbol(SymAddr, JITSymbolFlags::Exported);
-				  return JITSymbol(nullptr);
-				});
-			
+            auto Resolver = createLambdaResolver(
+                [&](const std::string &Name) {
+                  if (auto Sym = CompileLayer.findSymbol(Name, false))
+                    return Sym;
+                  return JITSymbol(nullptr);
+                },
+                [](const std::string &Name) {
+                  if (auto SymAddr =
+                        RTDyldMemoryManager::getSymbolAddressInProcess(Name))
+                    return JITSymbol(SymAddr, JITSymbolFlags::Exported);
+                  return JITSymbol(nullptr);
+                });
+            
             std::vector<std::unique_ptr<Module> > Ms;
             Ms.push_back(std::move(M));
 

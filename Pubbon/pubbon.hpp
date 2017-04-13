@@ -3,7 +3,7 @@
 
 extern PyTypeObject PubbonJittedCode_Type;
 
-typedef PyObject * (*Py_EvalFunc)(std::string, struct _frame *);
+typedef PyObject *(*Py_EvalFunc)(std::string, struct _frame *);
 
 struct PubbonJittedCode
 {
