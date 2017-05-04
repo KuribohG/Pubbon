@@ -1,6 +1,7 @@
 #include <Python.h>
 #include <frameobject.h>
 #include <cassert>
+#include <cwchar>
 
 #include "llvm_env.hpp"
 #include "translate.hpp"
@@ -52,7 +53,7 @@ bool jit_compile(PyCodeObject *code) {
 
     translate(code);
     jittedCode->j_evalfunc = &Jit_EvalHelper;
-    jittedCode->j_evalstate = "name"; // warning
+    jittedCode->j_evalstate = nullptr; // "name" generates warning
     return true;
 }
 
@@ -60,7 +61,10 @@ static PY_UINT64_T HOT_CODE = 1000;
 
 PyObject *eval_frame(PyFrameObject *frame, int throwflag) {
     // frame information
-    printf("** myjit is evaluating frame=%p lasti=%d lineno=%d throwflag=%d\n", frame, frame->f_lasti, frame->f_lineno, throwflag);
+    printf("** Pubbon is evaluating frame = %p, lasti = %d, lineno = %d, throwflag = %d\n", frame, frame->f_lasti, frame->f_lineno, throwflag);
+    wchar_t *str = PyUnicode_AsWideCharString(frame->f_code->co_name, nullptr);
+    printf("   name = %ls, argcount = %d, kwonlyargcount = %d, co_nlocals = %d\n", str, frame->f_code->co_argcount, frame->f_code->co_kwonlyargcount, frame->f_code->co_nlocals);
+    PyMem_Free(str);
 
     PyObject *extra = nullptr;
     _PyCode_GetExtra((PyObject *)frame->f_code, coIdx, (void **)&extra);
