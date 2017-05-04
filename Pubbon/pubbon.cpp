@@ -3,7 +3,6 @@
 #include <cassert>
 #include <cwchar>
 
-#include "llvm_env.hpp"
 #include "translate.hpp"
 #include "pubbon.hpp"
 

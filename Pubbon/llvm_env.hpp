@@ -1,11 +1,24 @@
 #ifndef LLVM_ENV_H
 #define LLVM_ENV_H
 
+#include <Python.h>
+
+#include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/IR/BasicBlock.h"
+#include "llvm/IR/Constants.h"
+#include "llvm/IR/DerivedTypes.h"
+#include "llvm/IR/Function.h"
+#include "llvm/IR/IRBuilder.h"
+#include "llvm/IR/LLVMContext.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/IR/Module.h"
+#include "llvm/IR/Verifier.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
+#include "llvm/ExecutionEngine/MCJIT.h"
 #include "llvm/ExecutionEngine/Orc/CompileUtils.h"
 #include "llvm/ExecutionEngine/Orc/IRCompileLayer.h"
 #include "llvm/ExecutionEngine/Orc/LambdaResolver.h"
@@ -19,59 +32,34 @@
 #include <memory>
 #include <string>
 #include <vector>
+#include <cstring>
+
+typedef PyObject *(*JittedFunc)(PyCodeObject *);
+
+extern llvm::LLVMContext TheContext;
+extern llvm::IRBuilder<> Builder;
+extern std::unique_ptr<llvm::Module> TheModule;
 
 namespace llvm {
 namespace orc {
 
 class LlvmEnv {
     private:
-        std::unique_ptr<TargetMachine> TM;
-        const DataLayout DL;
-        ObjectLinkingLayer<> ObjectLayer;
-        IRCompileLayer<decltype(ObjectLayer)> CompileLayer;
+        ExecutionEngine *EE;
 
     public:
-        typedef decltype(CompileLayer)::ModuleSetHandleT ModuleHandle;
-
-        LlvmEnv()
-            : TM(EngineBuilder().selectTarget()), DL(TM->createDataLayout()),
-              CompileLayer(ObjectLayer, SimpleCompiler(*TM)) {
-            llvm::sys::DynamicLibrary::LoadLibraryPermanently(nullptr);
+        LlvmEnv() {
+            std::string errStr;
+            EE = EngineBuilder(std::move(TheModule))
+                .setErrorStr(&errStr)
+                .create();
         }
 
-        TargetMachine &getTargetMachine() { return *TM; }
-
-        ModuleHandle addModule(std::unique_ptr<Module> M) {
-            auto Resolver = createLambdaResolver(
-                [&](const std::string &Name) {
-                  if (auto Sym = CompileLayer.findSymbol(Name, false))
-                    return Sym;
-                  return JITSymbol(nullptr);
-                },
-                [](const std::string &Name) {
-                  if (auto SymAddr =
-                        RTDyldMemoryManager::getSymbolAddressInProcess(Name))
-                    return JITSymbol(SymAddr, JITSymbolFlags::Exported);
-                  return JITSymbol(nullptr);
-                });
-            
-            std::vector<std::unique_ptr<Module> > Ms;
-            Ms.push_back(std::move(M));
-
-            return CompileLayer.addModuleSet(std::move(Ms),
-                                             make_unique<SectionMemoryManager>(),
-                                             std::move(Resolver));
-        }
-
-        JITSymbol findSymbol(const std::string Name) {
-            std::string MangledName;
-            raw_string_ostream MangledNameStream(MangledName);
-            Mangler::getNameWithPrefix(MangledNameStream, Name, DL);
-            return CompileLayer.findSymbol(MangledNameStream.str(), true);
-        }
-
-        void removeModule(ModuleHandle H) {
-            CompileLayer.removeModuleSet(H);
+        JittedFunc get(PyCodeObject *code) {
+            char *str = PyUnicode_AsUTF8(code->co_name);
+            JittedFunc func = (JittedFunc)EE->getFunctionAddress(str);
+            PyMem_Free(str);
+            return func;
         }
 };
 

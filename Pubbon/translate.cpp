@@ -1,3 +1,4 @@
+#include "llvm_env.hpp"
 #include "translate.hpp"
 
 #include <string>
@@ -125,8 +126,12 @@ PyObject *BinaryMatrixMultiply(PyObject *left, PyObject *right) {
 }
 
 void InitializeModule() {
-    TheModule = std::make_unique<Module>("pyjit", TheContext);
-    TheModule->setDataLayout(TheJIT->getTargetMachine().createDataLayout());
+    TheModule = make_unique<Module>("pyjit", TheContext);
+    /*
+    SMDiagnostic err;
+    std::string source_file("A.ll");
+    TheModule = parseIRFile(source_file, err, TheContext);
+    */
 }
 
 void CompiletoIR(PyCodeObject *code) {
@@ -139,6 +144,7 @@ Function *getFunction(std::string Name) {
 }
 
 void translate(PyCodeObject *code) {
+    /*
     InitializeModule();
     CompiletoIR(code);
     std::string Name = PyUnicode_AsUTF8(code->co_name);
@@ -157,4 +163,5 @@ void translate(PyCodeObject *code) {
     Builder.CreateRet(RetVal);
 
     TheJIT->addModule(std::move(TheModule));
+    */
 }
