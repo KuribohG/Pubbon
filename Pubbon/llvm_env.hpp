@@ -16,6 +16,7 @@
 #include "llvm/IR/Verifier.h"
 #include "llvm/ExecutionEngine/ExecutionEngine.h"
 #include "llvm/ExecutionEngine/JITSymbol.h"
+#include "llvm/ExecutionEngine/GenericValue.h"
 #include "llvm/ExecutionEngine/RuntimeDyld.h"
 #include "llvm/ExecutionEngine/SectionMemoryManager.h"
 #include "llvm/ExecutionEngine/MCJIT.h"
@@ -58,7 +59,6 @@ class LlvmEnv {
         JittedFunc get(PyCodeObject *code) {
             char *str = PyUnicode_AsUTF8(code->co_name);
             JittedFunc func = (JittedFunc)EE->getFunctionAddress(str);
-            PyMem_Free(str);
             return func;
         }
 };

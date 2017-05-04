@@ -3,14 +3,17 @@
 #include <cassert>
 #include <cwchar>
 
+#include "llvm_env.hpp"
 #include "translate.hpp"
 #include "pubbon.hpp"
 
 static Py_ssize_t coIdx;
 
-PyObject *Jit_EvalHelper(std::string state, PyFrameObject *frame) {
+/*
+PyObject *Jit_EvalHelper(PyFrameObject *frame) {
     return _PyEval_EvalFrameDefault(frame, 0);
 }
+*/
 
 PubbonJittedCode *jittedcode_new_direct() {
     PubbonJittedCode *new_ob = (PubbonJittedCode *)PubbonJittedCode_Type.tp_alloc(&PubbonJittedCode_Type, 0);
@@ -19,8 +22,8 @@ PubbonJittedCode *jittedcode_new_direct() {
     new_ob->j_run_count = 0;
     new_ob->j_failed = false;
     new_ob->j_evalfunc = nullptr;
-    new_ob->j_evalstate = nullptr;
-    new_ob->j_specialization_threshold = 500;
+//  new_ob->j_evalstate = nullptr;
+//  new_ob->j_specialization_threshold = 500;
 
     return new_ob;
 }
@@ -50,19 +53,27 @@ bool jit_compile(PyCodeObject *code) {
     _PyCode_GetExtra((PyObject *)code, coIdx, (void **)&extra);
     PubbonJittedCode *jittedCode = (PubbonJittedCode *)extra;
 
-    translate(code);
-    jittedCode->j_evalfunc = &Jit_EvalHelper;
-    jittedCode->j_evalstate = nullptr; // "name" generates warning
-    return true;
+    if (Translate(code))
+    {
+        jittedCode->j_evalfunc = TheJIT->get(code);
+        // jittedCode->j_evalstate = nullptr;
+        printf("** Compiled and succeeded!\n");
+        return true;
+    }
+    else
+    {
+        printf("** Compiled and failed!\n");
+        return false;
+    }
 }
 
-static PY_UINT64_T HOT_CODE = 1000;
+static PY_UINT64_T HOT_CODE = 4;
 
 PyObject *eval_frame(PyFrameObject *frame, int throwflag) {
     // frame information
     printf("** Pubbon is evaluating frame = %p, lasti = %d, lineno = %d, throwflag = %d\n", frame, frame->f_lasti, frame->f_lineno, throwflag);
     wchar_t *str = PyUnicode_AsWideCharString(frame->f_code->co_name, nullptr);
-    printf("   name = %ls, argcount = %d, kwonlyargcount = %d, co_nlocals = %d\n", str, frame->f_code->co_argcount, frame->f_code->co_kwonlyargcount, frame->f_code->co_nlocals);
+    printf("** name = %ls, argcount = %d, kwonlyargcount = %d, co_nlocals = %d\n", str, frame->f_code->co_argcount, frame->f_code->co_kwonlyargcount, frame->f_code->co_nlocals);
     PyMem_Free(str);
 
     PyObject *extra = nullptr;
@@ -74,16 +85,16 @@ PyObject *eval_frame(PyFrameObject *frame, int throwflag) {
         _PyCode_SetExtra((PyObject *)frame->f_code, coIdx, (PyObject *)jitted);
 
         jitted->j_run_count++;
-        printf("jitted run_count: %llu\n", jitted->j_run_count);
+        printf("** jitted run_count: %llu\n", jitted->j_run_count);
     }
     else if (!throwflag) {
         PubbonJittedCode *jitted = (PubbonJittedCode *)extra;
-        printf("jitted run_count: %llu\n", jitted->j_run_count);
+        printf("** jitted run_count: %llu\n", jitted->j_run_count);
 
         if (Py_TYPE(jitted) == &PubbonJittedCode_Type && !jitted->j_failed) {
-            if (jitted->j_evalfunc != nullptr) return jitted->j_evalfunc(jitted->j_evalstate, frame);
+            if (jitted->j_evalfunc != nullptr) return jitted->j_evalfunc(frame->f_code);
             else if (jitted->j_run_count++ > HOT_CODE) {
-                if (jit_compile(frame->f_code)) return jitted->j_evalfunc(jitted->j_evalstate, frame);
+                if (jit_compile(frame->f_code)) return jitted->j_evalfunc(frame->f_code);
                 else jitted->j_failed = true;
             }
         }
@@ -96,6 +107,7 @@ PyObject *install_jit(PyObject *self)
     llvm::InitializeNativeTarget();
     llvm::InitializeNativeTargetAsmPrinter();
     llvm::InitializeNativeTargetAsmParser();
+    InitializeModule();
 
     PyThreadState *tstate = PyThreadState_GET();
     tstate->interp->eval_frame = eval_frame;
