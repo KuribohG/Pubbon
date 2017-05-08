@@ -3,6 +3,7 @@
 
 #include <string>
 #include "Python.h"
+#include "frameobject.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
@@ -32,7 +33,7 @@ extern std::unique_ptr<LlvmEnv> TheJIT;
 
 void InitializeModule();
 
-bool Translate(PyCodeObject *code);
+bool Translate(PyFrameObject *frame);
 
 
 #endif

@@ -2,6 +2,7 @@
 #define LLVM_ENV_H
 
 #include <Python.h>
+#include "frameobject.h"
 
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/STLExtras.h"
@@ -35,7 +36,7 @@
 #include <vector>
 #include <cstring>
 
-typedef PyObject *(*JittedFunc)(PyCodeObject *);
+typedef PyObject *(*JittedFunc)(PyFrameObject *);
 
 extern llvm::LLVMContext TheContext;
 extern llvm::IRBuilder<> Builder;
@@ -56,8 +57,8 @@ class LlvmEnv {
                 .create();
         }
 
-        JittedFunc get(PyCodeObject *code) {
-            char *str = PyUnicode_AsUTF8(code->co_name);
+        JittedFunc get(PyObject *name) {
+            char *str = PyUnicode_AsUTF8(name);
             JittedFunc func = (JittedFunc)EE->getFunctionAddress(str);
             return func;
         }

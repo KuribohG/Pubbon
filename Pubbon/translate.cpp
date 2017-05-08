@@ -17,25 +17,28 @@ std::unique_ptr<Module> TheModule;
 std::unique_ptr<LlvmEnv> TheJIT;
 Module *M;
 
-StructType *PyObjectTy, *PyCodeObjectTy;
-PointerType *PyObjectPtrTy, *PyCodeObjectPtrTy;
+StructType *PyObjectTy, *PyCodeObjectTy, *PyFrameObjectTy;
+PointerType *PyObjectPtrTy, *PyCodeObjectPtrTy, *PyFrameObjectPtrTy;
 FunctionType *funcType;
 
 void InitializeModule() {
     SMDiagnostic err;
-    std::string source_file("F:\\Programming\\Python Compiler\\Pubbon\\Pubbon\\function.ll");
+    std::string source_file("/Users/zouyuheng/workspace/Pubbon/Pubbon/function.ll");
     TheModule = parseIRFile(source_file, err, TheContext);
+    M = TheModule.get();
     PyObjectTy = TheModule->getTypeByName("struct._object");
     PyObjectPtrTy = PyObjectTy->getPointerTo();
     PyCodeObjectTy = TheModule->getTypeByName("struct.PyCodeObject");
     PyCodeObjectPtrTy = PyCodeObjectTy->getPointerTo();
-    std::vector<Type*> param(1, PyCodeObjectPtrTy);
+    PyFrameObjectTy = TheModule->getTypeByName("struct._frame");
+    PyFrameObjectPtrTy = PyFrameObjectTy->getPointerTo();
+    std::vector<Type*> param(1, PyFrameObjectPtrTy);
     funcType = FunctionType::get(PyObjectPtrTy, param, false);
-    M = TheModule.get();
     TheJIT = make_unique<LlvmEnv>();
 }
 
-bool Translate(PyCodeObject *code) {
+bool Translate(PyFrameObject *frame) {
+    PyCodeObject *code = frame->f_code;
     bool flag = true;
     Value **stack = new Value *[code->co_stacksize];
     int stackDepth = 0;
@@ -48,12 +51,22 @@ bool Translate(PyCodeObject *code) {
     for (int i = 0; i < size; ++i) {
         auto opcode = _Py_OPCODE(byteCode[i]);
         auto oparg = _Py_OPARG(byteCode[i]);
-        // printf("-- %u %u\n", opcode, oparg);
+        //printf("-- %u %u\n", opcode, oparg);
         switch (opcode) {
         case LOAD_CONST:
         {
             ConstantInt *addressInt = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)PyTuple_GetItem(code->co_consts, oparg));
             stack[stackDepth++] = ConstantExpr::getIntToPtr(addressInt, PyObjectPtrTy);
+            break;
+        }
+        case LOAD_FAST:
+        {
+            flag=false;
+            break;
+        }
+        case BINARY_ADD:
+        {
+            flag=false;
             break;
         }
         case RETURN_VALUE:
@@ -67,6 +80,7 @@ bool Translate(PyCodeObject *code) {
             break;
         }
         }
+        if (!flag) break;
     }
     delete[] stack;
     if (!flag) newFunc->eraseFromParent();

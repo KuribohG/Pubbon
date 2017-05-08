@@ -1,5 +1,7 @@
 #include "Python.h"
-extern "C" PyCodeObject *TempFunc() { return nullptr; }
+#include "frameobject.h"
+extern "C" PyCodeObject *TempFunc1() { return nullptr; }
+extern "C" PyFrameObject *TempFunc2() { return nullptr; }
 extern "C" PyObject *BinaryAdd(PyObject *left, PyObject *right) {
     PyObject *sum;
     if (PyUnicode_CheckExact(left) && PyUnicode_CheckExact(right)) {

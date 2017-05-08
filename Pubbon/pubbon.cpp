@@ -46,16 +46,17 @@ static void jittedcode_dealloc(PyObject *co) {
     Py_TYPE(co)->tp_free(co);
 }
 
-bool jit_compile(PyCodeObject *code) {
+bool jit_compile(PyFrameObject *frame) {
+    PyCodeObject *code = frame->f_code;
     if (strcmp(PyUnicode_AsUTF8(code->co_name), "<module>") == 0) return false;
     PyObject *extra = nullptr;
     // use CPython API, otherwise it produce segfault
     _PyCode_GetExtra((PyObject *)code, coIdx, (void **)&extra);
     PubbonJittedCode *jittedCode = (PubbonJittedCode *)extra;
 
-    if (Translate(code))
+    if (Translate(frame))
     {
-        jittedCode->j_evalfunc = TheJIT->get(code);
+        jittedCode->j_evalfunc = TheJIT->get(code->co_name);
         // jittedCode->j_evalstate = nullptr;
         printf("** Compiled and succeeded!\n");
         return true;
@@ -92,9 +93,9 @@ PyObject *eval_frame(PyFrameObject *frame, int throwflag) {
         printf("** jitted run_count: %llu\n", jitted->j_run_count);
 
         if (Py_TYPE(jitted) == &PubbonJittedCode_Type && !jitted->j_failed) {
-            if (jitted->j_evalfunc != nullptr) return jitted->j_evalfunc(frame->f_code);
+            if (jitted->j_evalfunc != nullptr) return jitted->j_evalfunc(frame);
             else if (jitted->j_run_count++ > HOT_CODE) {
-                if (jit_compile(frame->f_code)) return jitted->j_evalfunc(frame->f_code);
+                if (jit_compile(frame)) return jitted->j_evalfunc(frame);
                 else jitted->j_failed = true;
             }
         }
