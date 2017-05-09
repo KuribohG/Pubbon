@@ -23,7 +23,9 @@ FunctionType *funcType;
 
 Function *PyIncref;
 Function *PyDecref;
+Function *PyXDecref;
 Function *BinaryAdd;
+Function *InplaceAdd;
 
 void InitializeModule() {
     SMDiagnostic err;
@@ -42,7 +44,9 @@ void InitializeModule() {
 
     PyIncref = M->getFunction("PyIncref");
     PyDecref = M->getFunction("PyDecref");
+    PyXDecref = M->getFunction("PyXDecref");
     BinaryAdd = M->getFunction("BinaryAdd");
+    InplaceAdd = M->getFunction("InplaceAdd");
 }
 
 bool Translate(PyFrameObject *frame) {
@@ -84,10 +88,26 @@ bool Translate(PyFrameObject *frame) {
             stack[stackDepth++] = val;
             break;
         }
+        case STORE_FAST: {
+            ConstantInt *idx = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)oparg);
+            ConstantInt *addressInt = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)fastlocals);
+            Constant *ptr = ConstantExpr::getGetElementPtr(PyObjectPtrTy, ConstantExpr::getIntToPtr(addressInt, PyObjectPtrTy->getPointerTo()), idx);
+            Value *last = Builder.CreateLoad(ptr);
+            Value *val = stack[--stackDepth];
+            Builder.CreateStore(val, ptr);
+            Builder.CreateCall(PyXDecref, std::vector<Value *>{last});
+            break;
+        }
         case BINARY_ADD: {
             Value *right = stack[--stackDepth];
             Value *left = stack[--stackDepth];
             stack[stackDepth++] = Builder.CreateCall(BinaryAdd, std::vector<Value *>{left, right});
+            break;
+        }
+        case INPLACE_ADD: {
+            Value *right = stack[--stackDepth];
+            Value *left = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(InplaceAdd, std::vector<Value *>{left, right});
             break;
         }
         case RETURN_VALUE: {
