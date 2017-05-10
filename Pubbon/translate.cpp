@@ -16,6 +16,7 @@ IRBuilder<> Builder(TheContext);
 std::unique_ptr<Module> TheModule;
 std::unique_ptr<LlvmEnv> TheJIT;
 Module *M;
+std::unique_ptr<legacy::FunctionPassManager> fpm;
 
 StructType *PyObjectTy, *PyCodeObjectTy, *PyFrameObjectTy;
 PointerType *PyObjectPtrTy, *PyCodeObjectPtrTy, *PyFrameObjectPtrTy;
@@ -25,11 +26,19 @@ Function *PyIncref;
 Function *PyDecref;
 Function *PyXDecref;
 Function *BinaryAdd;
+Function *BinarySubtract;
+Function *BinarySubscr;
+Function *BinaryLshift;
+Function *BinaryRshift;
+Function *BinaryAnd;
+Function *BinaryXor;
+Function *BinaryOr;
 Function *InplaceAdd;
+Function *InplaceSubtract;
 
 void InitializeModule() {
     SMDiagnostic err;
-    std::string source_file("F:\\Programming\\Python Compiler\\Pubbon\\Pubbon\\function.ll");
+    std::string source_file("/Users/zouyuheng/workspace/Pubbon/Pubbon/function.ll");
     TheModule = parseIRFile(source_file, err, TheContext);
     M = TheModule.get();
     PyObjectTy = TheModule->getTypeByName("struct._object");
@@ -42,11 +51,39 @@ void InitializeModule() {
     funcType = FunctionType::get(PyObjectPtrTy, param, false);
     TheJIT = make_unique<LlvmEnv>();
 
+    fpm = make_unique<legacy::FunctionPassManager>(M);
+    fpm->add(createInstructionCombiningPass());
+    fpm->add(createReassociatePass());
+    fpm->add(createGVNPass());
+    fpm->add(createCFGSimplificationPass());
+    fpm->doInitialization();
+
     PyIncref = M->getFunction("PyIncref");
+    fpm->run(*PyIncref);
     PyDecref = M->getFunction("PyDecref");
+    fpm->run(*PyDecref);
     PyXDecref = M->getFunction("PyXDecref");
+    fpm->run(*PyXDecref);
     BinaryAdd = M->getFunction("BinaryAdd");
+    fpm->run(*BinaryAdd);
+    BinarySubtract = M->getFunction("BinarySubtract");
+    fpm->run(*BinarySubtract);
+    BinarySubscr = M->getFunction("BinarySubscr");
+    fpm->run(*BinarySubscr);
+    BinaryLshift = M->getFunction("BinaryLshift");
+    fpm->run(*BinaryLshift);
+    BinaryRshift = M->getFunction("BinaryRshift");
+    fpm->run(*BinaryRshift);
+    BinaryAnd = M->getFunction("BinaryAnd");
+    fpm->run(*BinaryAnd);
+    BinaryXor = M->getFunction("BinaryXor");
+    fpm->run(*BinaryXor);
+    BinaryOr = M->getFunction("BinaryOr");
+    fpm->run(*BinaryOr);
     InplaceAdd = M->getFunction("InplaceAdd");
+    fpm->run(*InplaceAdd);
+    InplaceSubtract = M->getFunction("InplaceSubtract");
+    fpm->run(*InplaceSubtract);
 }
 
 bool Translate(PyFrameObject *frame) {
@@ -104,10 +141,58 @@ bool Translate(PyFrameObject *frame) {
             stack[stackDepth++] = Builder.CreateCall(BinaryAdd, std::vector<Value *>{left, right});
             break;
         }
+        case BINARY_SUBTRACT: {
+            Value *right = stack[--stackDepth];
+            Value *left = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(BinarySubtract, std::vector<Value *>{left, right});
+            break;
+        }
+        case BINARY_SUBSCR: {
+            Value *sub = stack[--stackDepth];
+            Value *container = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(BinarySubscr, std::vector<Value *>{container, sub});
+            break;
+        }
+        case BINARY_LSHIFT: {
+            Value *right = stack[--stackDepth];
+            Value *left = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(BinaryLshift, std::vector<Value *>{left, right});
+            break;
+        }
+        case BINARY_RSHIFT: {
+            Value *right = stack[--stackDepth];
+            Value *left = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(BinaryRshift, std::vector<Value *>{left, right});
+            break;
+        }
+        case BINARY_AND: {
+            Value *right = stack[--stackDepth];
+            Value *left = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(BinaryAnd, std::vector<Value *>{left, right});
+            break;
+        }
+        case BINARY_XOR: {
+            Value *right = stack[--stackDepth];
+            Value *left = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(BinaryXor, std::vector<Value *>{left, right});
+            break;
+        }
+        case BINARY_OR: {
+            Value *right = stack[--stackDepth];
+            Value *left = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(BinaryOr, std::vector<Value *>{left, right});
+            break;
+        }
         case INPLACE_ADD: {
             Value *right = stack[--stackDepth];
             Value *left = stack[--stackDepth];
             stack[stackDepth++] = Builder.CreateCall(InplaceAdd, std::vector<Value *>{left, right});
+            break;
+        }
+        case INPLACE_SUBTRACT: {
+            Value *right = stack[--stackDepth];
+            Value *left = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(InplaceSubtract, std::vector<Value *>{left, right});
             break;
         }
         case RETURN_VALUE: {
@@ -125,6 +210,7 @@ bool Translate(PyFrameObject *frame) {
     if (!flag) newFunc->eraseFromParent();
     else
     {
+        fpm->run(*newFunc);
         newFunc->dump();
     }
     return flag;
