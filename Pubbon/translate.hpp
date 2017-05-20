@@ -35,5 +35,7 @@ void InitializeModule();
 
 bool Translate(PyFrameObject *frame);
 
+bool TranslateSpecial(PyFrameObject *frame);
+
 
 #endif

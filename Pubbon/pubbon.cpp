@@ -53,17 +53,28 @@ bool jit_compile(PyFrameObject *frame) {
     // use CPython API, otherwise it produce segfault
     _PyCode_GetExtra((PyObject *)code, coIdx, (void **)&extra);
     PubbonJittedCode *jittedCode = (PubbonJittedCode *)extra;
-
+    /*
     if (Translate(frame))
     {
         jittedCode->j_evalfunc = TheJIT->get(code->co_name);
         // jittedCode->j_evalstate = nullptr;
-        //printf("** Compiled and succeeded!\n");
+        printf("** Compiled and succeeded!\n");
         return true;
     }
     else
     {
-        //printf("** Compiled and failed!\n");
+        printf("** Compiled and failed!\n");
+        return false;
+    }
+    */
+    if (TranslateSpecial(frame))
+    {
+        jittedCode->j_evalfunc = TheJIT->get(code->co_name, true);
+        return true;
+    }
+    else
+    {
+        printf("** Compiled and failed!\n");
         return false;
     }
 }

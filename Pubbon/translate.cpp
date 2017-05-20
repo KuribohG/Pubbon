@@ -36,6 +36,9 @@ Function *BinaryOr;
 Function *InplaceAdd;
 Function *InplaceSubtract;
 
+Function *ToDouble;
+Function *FromDouble;
+
 void InitializeModule() {
     SMDiagnostic err;
     std::string source_file("/Users/zouyuheng/workspace/Pubbon/Pubbon/function.ll");
@@ -59,31 +62,21 @@ void InitializeModule() {
     fpm->doInitialization();
 
     PyIncref = M->getFunction("PyIncref");
-    fpm->run(*PyIncref);
     PyDecref = M->getFunction("PyDecref");
-    fpm->run(*PyDecref);
     PyXDecref = M->getFunction("PyXDecref");
-    fpm->run(*PyXDecref);
     BinaryAdd = M->getFunction("BinaryAdd");
-    fpm->run(*BinaryAdd);
     BinarySubtract = M->getFunction("BinarySubtract");
-    fpm->run(*BinarySubtract);
     BinarySubscr = M->getFunction("BinarySubscr");
-    fpm->run(*BinarySubscr);
     BinaryLshift = M->getFunction("BinaryLshift");
-    fpm->run(*BinaryLshift);
     BinaryRshift = M->getFunction("BinaryRshift");
-    fpm->run(*BinaryRshift);
     BinaryAnd = M->getFunction("BinaryAnd");
-    fpm->run(*BinaryAnd);
     BinaryXor = M->getFunction("BinaryXor");
-    fpm->run(*BinaryXor);
     BinaryOr = M->getFunction("BinaryOr");
-    fpm->run(*BinaryOr);
     InplaceAdd = M->getFunction("InplaceAdd");
-    fpm->run(*InplaceAdd);
     InplaceSubtract = M->getFunction("InplaceSubtract");
-    fpm->run(*InplaceSubtract);
+
+    ToDouble = M->getFunction("ToDouble");
+    FromDouble = M->getFunction("FromDouble");
 }
 
 bool Translate(PyFrameObject *frame) {
@@ -207,6 +200,85 @@ bool Translate(PyFrameObject *frame) {
         if (!flag) break;
     }
     delete[] stack;
+    if (!flag) newFunc->eraseFromParent();
+    else
+    {
+        fpm->run(*newFunc);
+        newFunc->dump();
+    }
+    return flag;
+}
+
+bool TranslateSpecial(PyFrameObject *frame) {
+    PyCodeObject *code = frame->f_code;
+    PyObject **fastlocals = frame->f_localsplus;
+    PyObject **freevars = frame->f_localsplus + code->co_nlocals;
+    PyObject *names = code->co_names;
+    PyObject *consts = code->co_consts;
+
+    bool flag = true;
+    Value **stack = new Value *[code->co_stacksize];
+    int stackDepth = 0;
+    auto byteCode = (_Py_CODEUNIT *)PyBytes_AsString(code->co_code);
+    auto size = PyBytes_Size(code->co_code) / sizeof(_Py_CODEUNIT);
+
+    char *str = PyUnicode_AsUTF8(code->co_name);
+    int len = strlen(str);
+    char *prefix = new char[len + 20];
+    strcpy(prefix, str);
+    const char *suffix = "_special";
+    strcat(prefix, suffix);
+    Function *newFunc = Function::Create(funcType, Function::ExternalLinkage, prefix, M);
+    BasicBlock *BB = BasicBlock::Create(TheContext, "entry", newFunc);
+    Builder.SetInsertPoint(BB);
+
+    for (int i = 0; i < size; i++) {
+        auto opcode = _Py_OPCODE(byteCode[i]);
+        auto oparg = _Py_OPARG(byteCode[i]);
+        switch (opcode) {
+        case LOAD_CONST: {
+            ConstantInt *addressInt = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)PyTuple_GetItem(consts, oparg));
+            Value *val = ConstantExpr::getIntToPtr(addressInt, PyObjectPtrTy);
+            Value *x = Builder.CreateCall(ToDouble, std::vector<Value *>{val});
+            stack[stackDepth++] = x;
+            break;
+        }
+        case LOAD_FAST: {
+            ConstantInt *idx = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)oparg);
+            ConstantInt *addressInt = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)fastlocals);
+            Constant *ptr = ConstantExpr::getGetElementPtr(PyObjectPtrTy, ConstantExpr::getIntToPtr(addressInt, PyObjectPtrTy->getPointerTo()), idx);
+            Value *val = Builder.CreateLoad(ptr);
+            Value *x = Builder.CreateCall(ToDouble, std::vector<Value *>{val});
+            stack[stackDepth++] = x;
+            break;
+        }
+        case BINARY_ADD: {
+            Value *right = stack[--stackDepth];
+            Value *left = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateFAdd(left, right);
+            break;
+        }
+        case BINARY_SUBTRACT: {
+            Value *right = stack[--stackDepth];
+            Value *left = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateFSub(left, right);
+            break;
+        }
+        case RETURN_VALUE: {
+            Value *val = stack[--stackDepth];
+            Value *x = Builder.CreateCall(FromDouble, std::vector<Value *>{val});
+            Builder.CreateRet(x);
+            break;
+        }
+        default: {
+            flag = false;
+            break;
+        }
+        }
+        if(!flag) break;
+    }
+    delete[] stack;
+    delete[] prefix;
     if (!flag) newFunc->eraseFromParent();
     else
     {

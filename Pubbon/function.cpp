@@ -5,6 +5,14 @@ extern "C" PyCodeObject *TempFunc1() { return nullptr; }
 
 extern "C" PyFrameObject *TempFunc2() { return nullptr; }
 
+extern "C" double ToDouble(PyObject *obj) {
+    return ((PyFloatObject *)(obj))->ob_fval;
+}
+
+extern "C" PyObject *FromDouble(double x) {
+    return PyFloat_FromDouble(x);
+}
+
 extern "C" void PyIncref(PyObject *obj) { Py_INCREF(obj); }
 
 extern "C" void PyDecref(PyObject *obj) { Py_DECREF(obj); }
