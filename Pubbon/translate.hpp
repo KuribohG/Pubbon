@@ -29,6 +29,13 @@
 using namespace llvm;
 using namespace llvm::orc;
 
+struct Block {
+	int type;
+	int handler;
+	int level;
+	Block(int _type, int _handler, int _level): type(_type), handler(_handler), level(_level) { }
+};
+
 extern std::unique_ptr<LlvmEnv> TheJIT;
 
 void InitializeModule();

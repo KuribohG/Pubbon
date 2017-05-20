@@ -117,6 +117,7 @@ bool Translate(PyFrameObject *frame) {
     auto size = PyBytes_Size(code->co_code) / sizeof(_Py_CODEUNIT);
     BasicBlock **label = new BasicBlock *[size];
     for (int i = 0; i < size; ++i) label[i] = BasicBlock::Create(TheContext);
+    std::stack<Block> blockStack;
 
     char *str = PyUnicode_AsUTF8(code->co_name);
     Function *newFunc = Function::Create(funcType, Function::ExternalLinkage, str, M);
@@ -169,6 +170,44 @@ bool Translate(PyFrameObject *frame) {
             Builder.CreateCall(PyDecref, std::vector<Value *>{val});
             Builder.CreateCondBr(cond, label[i + 1], label[oparg / sizeof(_Py_CODEUNIT)]);
             continuity = false;
+            break;
+        }
+        case POP_JUMP_IF_TRUE: {
+            Value *val = stack[--stackDepth];
+            Value *cond = Builder.CreateCall(AsCond, std::vector<Value *>{val});
+            cond = Builder.CreateTrunc(cond, Type::getInt1Ty(TheContext));
+            Builder.CreateCall(PyDecref, std::vector<Value *>{val});
+            Builder.CreateCondBr(cond, label[oparg / sizeof(_Py_CODEUNIT)], label[i + 1]);
+            continuity = false;
+            break;
+        }
+        case SETUP_LOOP: {
+            blockStack.push(Block(opcode, i + oparg / sizeof(_Py_CODEUNIT) + 1, stackDepth));
+            break;
+        }
+        case BREAK_LOOP: {
+            Block block = blockStack.top();
+            for (int tempDepth = stackDepth; tempDepth > block.level; --tempDepth) {
+                Value *val = stack[tempDepth - 1];
+                Builder.CreateCall(PyXDecref, std::vector<Value *>{val});
+            }
+            Builder.CreateBr(label[block.handler]);
+            continuity = false;
+            break;
+        }
+        case CONTINUE_LOOP:
+        case JUMP_ABSOLUTE: {
+            Builder.CreateBr(label[oparg / sizeof(_Py_CODEUNIT)]);
+            continuity = false;
+            break;
+        }
+        case POP_BLOCK: {
+            Block block = blockStack.top();
+            blockStack.pop();
+            while (stackDepth > block.level) {
+                Value *val = stack[--stackDepth];
+                Builder.CreateCall(PyXDecref, std::vector<Value *>{val});
+            }
             break;
         }
         case COMPARE_OP: {
