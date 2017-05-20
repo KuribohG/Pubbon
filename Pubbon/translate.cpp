@@ -47,7 +47,7 @@ Function *FromDouble;
 
 void InitializeModule() {
     SMDiagnostic err;
-    std::string source_file("F:\\Programming\\Python Compiler\\Pubbon\\Pubbon\\function.ll");
+    std::string source_file("/Users/zouyuheng/workspace/Pubbon/Pubbon/function.ll");
     TheModule = parseIRFile(source_file, err, TheContext);
     M = TheModule.get();
     PyObjectTy = TheModule->getTypeByName("struct._object");
@@ -340,6 +340,16 @@ bool TranslateSpecial(PyFrameObject *frame) {
     BasicBlock *BB = BasicBlock::Create(TheContext, "entry", newFunc);
     Builder.SetInsertPoint(BB);
 
+    Value **fastlocals_value = new Value *[code->co_nlocals];
+    ConstantInt *localsInt = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)fastlocals);
+    for (int i = 0; i < code->co_nlocals; i++) {
+        ConstantInt *idx = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)i);
+        Constant *ptr = ConstantExpr::getGetElementPtr(PyObjectPtrTy, ConstantExpr::getIntToPtr(localsInt, PyObjectPtrTy->getPointerTo()), idx);
+        Value *val = Builder.CreateLoad(ptr);
+        Value *x = Builder.CreateCall(ToDouble, std::vector<Value *>{val});
+        fastlocals_value[i] = x;
+    }
+
     for (int i = 0; i < size; i++) {
         auto opcode = _Py_OPCODE(byteCode[i]);
         auto oparg = _Py_OPARG(byteCode[i]);
@@ -352,12 +362,12 @@ bool TranslateSpecial(PyFrameObject *frame) {
             break;
         }
         case LOAD_FAST: {
+            auto DoublePtrTy = Type::getDoubleTy(TheContext)->getPointerTo();
             ConstantInt *idx = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)oparg);
-            ConstantInt *addressInt = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)fastlocals);
-            Constant *ptr = ConstantExpr::getGetElementPtr(PyObjectPtrTy, ConstantExpr::getIntToPtr(addressInt, PyObjectPtrTy->getPointerTo()), idx);
+            ConstantInt *addressInt = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)fastlocals_value);
+            Constant *ptr = ConstantExpr::getGetElementPtr(DoublePtrTy, ConstantExpr::getIntToPtr(addressInt, DoublePtrTy), idx);
             Value *val = Builder.CreateLoad(ptr);
-            Value *x = Builder.CreateCall(ToDouble, std::vector<Value *>{val});
-            stack[stackDepth++] = x;
+            stack[stackDepth++] = val;
             break;
         }
         case BINARY_ADD: {
