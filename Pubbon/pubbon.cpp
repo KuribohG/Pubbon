@@ -83,9 +83,9 @@ static PY_UINT64_T HOT_CODE = 4;
 
 PyObject *eval_frame(PyFrameObject *frame, int throwflag) {
     // frame information
-    //printf("** Pubbon is evaluating frame = %p, lasti = %d, lineno = %d, throwflag = %d\n", frame, frame->f_lasti, frame->f_lineno, throwflag);
+    // printf("** Pubbon is evaluating frame = %p, lasti = %d, lineno = %d, throwflag = %d\n", frame, frame->f_lasti, frame->f_lineno, throwflag);
     wchar_t *str = PyUnicode_AsWideCharString(frame->f_code->co_name, nullptr);
-    //printf("** name = %ls, argcount = %d, kwonlyargcount = %d, co_nlocals = %d\n", str, frame->f_code->co_argcount, frame->f_code->co_kwonlyargcount, frame->f_code->co_nlocals);
+    // printf("** name = %ls, argcount = %d, kwonlyargcount = %d, co_nlocals = %d\n", str, frame->f_code->co_argcount, frame->f_code->co_kwonlyargcount, frame->f_code->co_nlocals);
     PyMem_Free(str);
 
     PyObject *extra = nullptr;
@@ -97,11 +97,11 @@ PyObject *eval_frame(PyFrameObject *frame, int throwflag) {
         _PyCode_SetExtra((PyObject *)frame->f_code, coIdx, (PyObject *)jitted);
 
         jitted->j_run_count++;
-        //printf("** jitted run_count: %llu\n", jitted->j_run_count);
+        // printf("** jitted run_count: %llu\n", jitted->j_run_count);
     }
     else if (!throwflag) {
         PubbonJittedCode *jitted = (PubbonJittedCode *)extra;
-        //printf("** jitted run_count: %llu\n", jitted->j_run_count);
+        // printf("** jitted run_count: %llu\n", jitted->j_run_count);
 
         if (Py_TYPE(jitted) == &PubbonJittedCode_Type && !jitted->j_failed) {
             if (jitted->j_evalfunc != nullptr) return jitted->j_evalfunc(frame);

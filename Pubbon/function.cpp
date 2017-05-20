@@ -101,3 +101,25 @@ extern "C" PyObject *InplaceSubtract(PyObject *left, PyObject *right) {
     return diff;
 }
 
+extern "C" PyObject *SequenceContains(PyObject *container, PyObject *sub) {
+    PyObject *res = PySequence_Contains(container, sub) ? Py_True : Py_False;
+    Py_INCREF(res);
+    return res;
+}
+
+extern "C" PyObject *SequenceNotContains(PyObject *container, PyObject *sub) {
+    PyObject *res = PySequence_Contains(container, sub) ? Py_False : Py_True;
+    Py_INCREF(res);
+    return res;
+}
+
+extern "C" PyObject *RichCompare(PyObject *left, PyObject *right, int op) {
+    return PyObject_RichCompare(left, right, op);
+}
+
+extern "C" bool AsCond(PyObject *cond)
+{
+    if (cond == Py_True) return true;
+    else if (cond == Py_False) return false;
+    else return PyObject_IsTrue(cond) > 0;
+}
