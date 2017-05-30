@@ -150,16 +150,54 @@ extern "C" void StoreFast(PyFrameObject *frame, int idx, PyObject *val)
     Py_XDECREF(last);
 }
 
+extern "C" PyObject *UnaryPositive(PyObject *val)
+{
+    PyObject *res = PyNumber_Positive(val);
+    Py_DECREF(val);
+    return res;
+}
+
+extern "C" PyObject *UnaryNegative(PyObject *val)
+{
+    PyObject *res = PyNumber_Negative(val);
+    Py_DECREF(val);
+    return res;
+}
+
+extern "C" PyObject *UnaryNot(PyObject *val)
+{
+    int err = PyObject_IsTrue(val);
+    Py_DECREF(val);
+    if (err == 0) {
+        Py_INCREF(Py_True);
+        return Py_True;
+    }
+    else if (err > 0)
+    {
+        Py_INCREF(Py_False);
+        return Py_False;
+    }
+}
+
+extern "C" PyObject *UnaryInvert(PyObject *val)
+{
+    PyObject *res = PyNumber_Invert(val);
+    Py_DECREF(val);
+    return res;
+}
+
 extern "C" PyObject *CallFunction(PyObject *func, int nargs, ...)
 {
     PyObject *args = PyTuple_New(nargs);    
     va_list argList;
     va_start(argList, nargs);
     for (int i = 0; i < nargs; ++i) {
-        PyTuple_SET_ITEM(args, i, va_arg(argList, PyObject *));
+        PyObject *arg = va_arg(argList, PyObject *);
+        PyTuple_SET_ITEM(args, i, arg);
     }
     va_end(argList);
     PyObject *res = PyObject_Call(func, args, nullptr);
     Py_DECREF(func);
+    Py_DECREF(args);
     return res;
 }

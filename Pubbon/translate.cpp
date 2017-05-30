@@ -44,6 +44,10 @@ Function *AsCond;
 Function *LoadGlobal;
 Function *LoadFast;
 Function *StoreFast;
+Function *UnaryPositive;
+Function *UnaryNegative;
+Function *UnaryNot;
+Function *UnaryInvert;
 Function *CallFunction;
 
 Function *ToDouble;
@@ -94,6 +98,10 @@ void InitializeModule() {
     LoadGlobal = M->getFunction("LoadGlobal");
     LoadFast = M->getFunction("LoadFast");
     StoreFast = M->getFunction("StoreFast");
+    UnaryPositive = M->getFunction("UnaryPositive");
+    UnaryNegative = M->getFunction("UnaryNegative");
+    UnaryNot = M->getFunction("UnaryNot");
+    UnaryInvert = M->getFunction("UnaryInvert");
     CallFunction = M->getFunction("CallFunction");
     
     ToDouble = M->getFunction("ToDouble");
@@ -304,6 +312,26 @@ bool Translate(PyFrameObject *frame) {
             Value *right = stack[--stackDepth];
             Value *left = stack[--stackDepth];
             stack[stackDepth++] = Builder.CreateCall(InplaceSubtract, std::vector<Value *>{left, right});
+            break;
+        }
+        case UNARY_POSITIVE: {
+            Value *val = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(UnaryPositive, std::vector<Value *>{val});
+            break;
+        }
+        case UNARY_NEGATIVE: {
+            Value *val = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(UnaryNegative, std::vector<Value *>{val});
+            break;
+        }
+        case UNARY_NOT: {
+            Value *val = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(UnaryNot, std::vector<Value *>{val});
+            break;
+        }
+        case UNARY_INVERT: {
+            Value *val = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(UnaryInvert, std::vector<Value *>{val});
             break;
         }
         case POP_TOP: {

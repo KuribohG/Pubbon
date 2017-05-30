@@ -1254,6 +1254,219 @@ define void @StoreFast(%struct._frame*, i32, %struct._object*) #1 {
 }
 
 ; Function Attrs: noinline uwtable
+define %struct._object* @UnaryPositive(%struct._object*) #1 {
+  %2 = alloca %struct._object*, align 8
+  %3 = alloca %struct._object*, align 8
+  %4 = alloca %struct._object*, align 8
+  store %struct._object* %0, %struct._object** %2, align 8
+  %5 = load %struct._object*, %struct._object** %2, align 8
+  %6 = call %struct._object* @PyNumber_Positive(%struct._object* %5)
+  store %struct._object* %6, %struct._object** %3, align 8
+  br label %7
+
+; <label>:7:                                      ; preds = %1
+  %8 = load %struct._object*, %struct._object** %2, align 8
+  store %struct._object* %8, %struct._object** %4, align 8
+  %9 = load %struct._object*, %struct._object** %4, align 8
+  %10 = getelementptr inbounds %struct._object, %struct._object* %9, i32 0, i32 0
+  %11 = load i64, i64* %10, align 8
+  %12 = add nsw i64 %11, -1
+  store i64 %12, i64* %10, align 8
+  %13 = icmp ne i64 %12, 0
+  br i1 %13, label %14, label %15
+
+; <label>:14:                                     ; preds = %7
+  br label %22
+
+; <label>:15:                                     ; preds = %7
+  %16 = load %struct._object*, %struct._object** %4, align 8
+  %17 = getelementptr inbounds %struct._object, %struct._object* %16, i32 0, i32 1
+  %18 = load %struct._typeobject*, %struct._typeobject** %17, align 8
+  %19 = getelementptr inbounds %struct._typeobject, %struct._typeobject* %18, i32 0, i32 4
+  %20 = load void (%struct._object*)*, void (%struct._object*)** %19, align 8
+  %21 = load %struct._object*, %struct._object** %4, align 8
+  call void %20(%struct._object* %21)
+  br label %22
+
+; <label>:22:                                     ; preds = %15, %14
+  br label %23
+
+; <label>:23:                                     ; preds = %22
+  %24 = load %struct._object*, %struct._object** %3, align 8
+  ret %struct._object* %24
+}
+
+declare dllimport %struct._object* @PyNumber_Positive(%struct._object*) #2
+
+; Function Attrs: noinline uwtable
+define %struct._object* @UnaryNegative(%struct._object*) #1 {
+  %2 = alloca %struct._object*, align 8
+  %3 = alloca %struct._object*, align 8
+  %4 = alloca %struct._object*, align 8
+  store %struct._object* %0, %struct._object** %2, align 8
+  %5 = load %struct._object*, %struct._object** %2, align 8
+  %6 = call %struct._object* @PyNumber_Negative(%struct._object* %5)
+  store %struct._object* %6, %struct._object** %3, align 8
+  br label %7
+
+; <label>:7:                                      ; preds = %1
+  %8 = load %struct._object*, %struct._object** %2, align 8
+  store %struct._object* %8, %struct._object** %4, align 8
+  %9 = load %struct._object*, %struct._object** %4, align 8
+  %10 = getelementptr inbounds %struct._object, %struct._object* %9, i32 0, i32 0
+  %11 = load i64, i64* %10, align 8
+  %12 = add nsw i64 %11, -1
+  store i64 %12, i64* %10, align 8
+  %13 = icmp ne i64 %12, 0
+  br i1 %13, label %14, label %15
+
+; <label>:14:                                     ; preds = %7
+  br label %22
+
+; <label>:15:                                     ; preds = %7
+  %16 = load %struct._object*, %struct._object** %4, align 8
+  %17 = getelementptr inbounds %struct._object, %struct._object* %16, i32 0, i32 1
+  %18 = load %struct._typeobject*, %struct._typeobject** %17, align 8
+  %19 = getelementptr inbounds %struct._typeobject, %struct._typeobject* %18, i32 0, i32 4
+  %20 = load void (%struct._object*)*, void (%struct._object*)** %19, align 8
+  %21 = load %struct._object*, %struct._object** %4, align 8
+  call void %20(%struct._object* %21)
+  br label %22
+
+; <label>:22:                                     ; preds = %15, %14
+  br label %23
+
+; <label>:23:                                     ; preds = %22
+  %24 = load %struct._object*, %struct._object** %3, align 8
+  ret %struct._object* %24
+}
+
+declare dllimport %struct._object* @PyNumber_Negative(%struct._object*) #2
+
+; Function Attrs: noinline uwtable
+define %struct._object* @UnaryNot(%struct._object*) #1 {
+  %2 = alloca %struct._object*, align 8
+  %3 = alloca %struct._object*, align 8
+  %4 = alloca i32, align 4
+  %5 = alloca %struct._object*, align 8
+  store %struct._object* %0, %struct._object** %3, align 8
+  %6 = load %struct._object*, %struct._object** %3, align 8
+  %7 = call i32 @PyObject_IsTrue(%struct._object* %6)
+  store i32 %7, i32* %4, align 4
+  br label %8
+
+; <label>:8:                                      ; preds = %1
+  %9 = load %struct._object*, %struct._object** %3, align 8
+  store %struct._object* %9, %struct._object** %5, align 8
+  %10 = load %struct._object*, %struct._object** %5, align 8
+  %11 = getelementptr inbounds %struct._object, %struct._object* %10, i32 0, i32 0
+  %12 = load i64, i64* %11, align 8
+  %13 = add nsw i64 %12, -1
+  store i64 %13, i64* %11, align 8
+  %14 = icmp ne i64 %13, 0
+  br i1 %14, label %15, label %16
+
+; <label>:15:                                     ; preds = %8
+  br label %23
+
+; <label>:16:                                     ; preds = %8
+  %17 = load %struct._object*, %struct._object** %5, align 8
+  %18 = getelementptr inbounds %struct._object, %struct._object* %17, i32 0, i32 1
+  %19 = load %struct._typeobject*, %struct._typeobject** %18, align 8
+  %20 = getelementptr inbounds %struct._typeobject, %struct._typeobject* %19, i32 0, i32 4
+  %21 = load void (%struct._object*)*, void (%struct._object*)** %20, align 8
+  %22 = load %struct._object*, %struct._object** %5, align 8
+  call void %21(%struct._object* %22)
+  br label %23
+
+; <label>:23:                                     ; preds = %16, %15
+  br label %24
+
+; <label>:24:                                     ; preds = %23
+  %25 = load i32, i32* %4, align 4
+  %26 = icmp eq i32 %25, 0
+  br i1 %26, label %27, label %30
+
+; <label>:27:                                     ; preds = %24
+  %28 = load i64, i64* getelementptr inbounds (%struct._longobject, %struct._longobject* @_Py_TrueStruct, i32 0, i32 0, i32 0, i32 0), align 8
+  %29 = add nsw i64 %28, 1
+  store i64 %29, i64* getelementptr inbounds (%struct._longobject, %struct._longobject* @_Py_TrueStruct, i32 0, i32 0, i32 0, i32 0), align 8
+  store %struct._object* getelementptr inbounds (%struct._longobject, %struct._longobject* @_Py_TrueStruct, i32 0, i32 0, i32 0), %struct._object** %2, align 8
+  br label %38
+
+; <label>:30:                                     ; preds = %24
+  %31 = load i32, i32* %4, align 4
+  %32 = icmp sgt i32 %31, 0
+  br i1 %32, label %33, label %36
+
+; <label>:33:                                     ; preds = %30
+  %34 = load i64, i64* getelementptr inbounds (%struct._longobject, %struct._longobject* @_Py_FalseStruct, i32 0, i32 0, i32 0, i32 0), align 8
+  %35 = add nsw i64 %34, 1
+  store i64 %35, i64* getelementptr inbounds (%struct._longobject, %struct._longobject* @_Py_FalseStruct, i32 0, i32 0, i32 0, i32 0), align 8
+  store %struct._object* getelementptr inbounds (%struct._longobject, %struct._longobject* @_Py_FalseStruct, i32 0, i32 0, i32 0), %struct._object** %2, align 8
+  br label %38
+
+; <label>:36:                                     ; preds = %30
+  br label %37
+
+; <label>:37:                                     ; preds = %36
+  call void @llvm.trap()
+  unreachable
+
+; <label>:38:                                     ; preds = %33, %27
+  %39 = load %struct._object*, %struct._object** %2, align 8
+  ret %struct._object* %39
+}
+
+; Function Attrs: noreturn nounwind
+declare void @llvm.trap() #3
+
+; Function Attrs: noinline uwtable
+define %struct._object* @UnaryInvert(%struct._object*) #1 {
+  %2 = alloca %struct._object*, align 8
+  %3 = alloca %struct._object*, align 8
+  %4 = alloca %struct._object*, align 8
+  store %struct._object* %0, %struct._object** %2, align 8
+  %5 = load %struct._object*, %struct._object** %2, align 8
+  %6 = call %struct._object* @PyNumber_Invert(%struct._object* %5)
+  store %struct._object* %6, %struct._object** %3, align 8
+  br label %7
+
+; <label>:7:                                      ; preds = %1
+  %8 = load %struct._object*, %struct._object** %2, align 8
+  store %struct._object* %8, %struct._object** %4, align 8
+  %9 = load %struct._object*, %struct._object** %4, align 8
+  %10 = getelementptr inbounds %struct._object, %struct._object* %9, i32 0, i32 0
+  %11 = load i64, i64* %10, align 8
+  %12 = add nsw i64 %11, -1
+  store i64 %12, i64* %10, align 8
+  %13 = icmp ne i64 %12, 0
+  br i1 %13, label %14, label %15
+
+; <label>:14:                                     ; preds = %7
+  br label %22
+
+; <label>:15:                                     ; preds = %7
+  %16 = load %struct._object*, %struct._object** %4, align 8
+  %17 = getelementptr inbounds %struct._object, %struct._object* %16, i32 0, i32 1
+  %18 = load %struct._typeobject*, %struct._typeobject** %17, align 8
+  %19 = getelementptr inbounds %struct._typeobject, %struct._typeobject* %18, i32 0, i32 4
+  %20 = load void (%struct._object*)*, void (%struct._object*)** %19, align 8
+  %21 = load %struct._object*, %struct._object** %4, align 8
+  call void %20(%struct._object* %21)
+  br label %22
+
+; <label>:22:                                     ; preds = %15, %14
+  br label %23
+
+; <label>:23:                                     ; preds = %22
+  %24 = load %struct._object*, %struct._object** %3, align 8
+  ret %struct._object* %24
+}
+
+declare dllimport %struct._object* @PyNumber_Invert(%struct._object*) #2
+
+; Function Attrs: noinline uwtable
 define %struct._object* @CallFunction(%struct._object*, i32, ...) #1 {
   %3 = alloca i32, align 4
   %4 = alloca %struct._object*, align 8
@@ -1262,99 +1475,134 @@ define %struct._object* @CallFunction(%struct._object*, i32, ...) #1 {
   %7 = alloca i32, align 4
   %8 = alloca %struct._object*, align 8
   %9 = alloca %struct._object*, align 8
+  %10 = alloca %struct._object*, align 8
+  %11 = alloca %struct._object*, align 8
   store i32 %1, i32* %3, align 4
   store %struct._object* %0, %struct._object** %4, align 8
-  %10 = load i32, i32* %3, align 4
-  %11 = sext i32 %10 to i64
-  %12 = call %struct._object* @PyTuple_New(i64 %11)
-  store %struct._object* %12, %struct._object** %5, align 8
-  %13 = bitcast i8** %6 to i8*
-  call void @llvm.va_start(i8* %13)
+  %12 = load i32, i32* %3, align 4
+  %13 = sext i32 %12 to i64
+  %14 = call %struct._object* @PyTuple_New(i64 %13)
+  store %struct._object* %14, %struct._object** %5, align 8
+  %15 = bitcast i8** %6 to i8*
+  call void @llvm.va_start(i8* %15)
   store i32 0, i32* %7, align 4
-  br label %14
+  br label %16
 
-; <label>:14:                                     ; preds = %29, %2
-  %15 = load i32, i32* %7, align 4
-  %16 = load i32, i32* %3, align 4
-  %17 = icmp slt i32 %15, %16
-  br i1 %17, label %18, label %32
+; <label>:16:                                     ; preds = %32, %2
+  %17 = load i32, i32* %7, align 4
+  %18 = load i32, i32* %3, align 4
+  %19 = icmp slt i32 %17, %18
+  br i1 %19, label %20, label %35
 
-; <label>:18:                                     ; preds = %14
-  %19 = load i8*, i8** %6, align 8
-  %20 = getelementptr inbounds i8, i8* %19, i64 8
-  store i8* %20, i8** %6, align 8
-  %21 = bitcast i8* %19 to %struct._object**
-  %22 = load %struct._object*, %struct._object** %21, align 8
-  %23 = load %struct._object*, %struct._object** %5, align 8
-  %24 = bitcast %struct._object* %23 to %struct.PyTupleObject*
-  %25 = getelementptr inbounds %struct.PyTupleObject, %struct.PyTupleObject* %24, i32 0, i32 1
-  %26 = load i32, i32* %7, align 4
-  %27 = sext i32 %26 to i64
-  %28 = getelementptr inbounds [1 x %struct._object*], [1 x %struct._object*]* %25, i64 0, i64 %27
-  store %struct._object* %22, %struct._object** %28, align 8
-  br label %29
+; <label>:20:                                     ; preds = %16
+  %21 = load i8*, i8** %6, align 8
+  %22 = getelementptr inbounds i8, i8* %21, i64 8
+  store i8* %22, i8** %6, align 8
+  %23 = bitcast i8* %21 to %struct._object**
+  %24 = load %struct._object*, %struct._object** %23, align 8
+  store %struct._object* %24, %struct._object** %8, align 8
+  %25 = load %struct._object*, %struct._object** %8, align 8
+  %26 = load %struct._object*, %struct._object** %5, align 8
+  %27 = bitcast %struct._object* %26 to %struct.PyTupleObject*
+  %28 = getelementptr inbounds %struct.PyTupleObject, %struct.PyTupleObject* %27, i32 0, i32 1
+  %29 = load i32, i32* %7, align 4
+  %30 = sext i32 %29 to i64
+  %31 = getelementptr inbounds [1 x %struct._object*], [1 x %struct._object*]* %28, i64 0, i64 %30
+  store %struct._object* %25, %struct._object** %31, align 8
+  br label %32
 
-; <label>:29:                                     ; preds = %18
-  %30 = load i32, i32* %7, align 4
-  %31 = add nsw i32 %30, 1
-  store i32 %31, i32* %7, align 4
-  br label %14
+; <label>:32:                                     ; preds = %20
+  %33 = load i32, i32* %7, align 4
+  %34 = add nsw i32 %33, 1
+  store i32 %34, i32* %7, align 4
+  br label %16
 
-; <label>:32:                                     ; preds = %14
-  %33 = bitcast i8** %6 to i8*
-  call void @llvm.va_end(i8* %33)
-  %34 = load %struct._object*, %struct._object** %5, align 8
-  %35 = load %struct._object*, %struct._object** %4, align 8
-  %36 = call %struct._object* @PyObject_Call(%struct._object* %35, %struct._object* %34, %struct._object* null)
-  store %struct._object* %36, %struct._object** %8, align 8
-  br label %37
-
-; <label>:37:                                     ; preds = %32
+; <label>:35:                                     ; preds = %16
+  %36 = bitcast i8** %6 to i8*
+  call void @llvm.va_end(i8* %36)
+  %37 = load %struct._object*, %struct._object** %5, align 8
   %38 = load %struct._object*, %struct._object** %4, align 8
-  store %struct._object* %38, %struct._object** %9, align 8
-  %39 = load %struct._object*, %struct._object** %9, align 8
-  %40 = getelementptr inbounds %struct._object, %struct._object* %39, i32 0, i32 0
-  %41 = load i64, i64* %40, align 8
-  %42 = add nsw i64 %41, -1
-  store i64 %42, i64* %40, align 8
-  %43 = icmp ne i64 %42, 0
-  br i1 %43, label %44, label %45
+  %39 = call %struct._object* @PyObject_Call(%struct._object* %38, %struct._object* %37, %struct._object* null)
+  store %struct._object* %39, %struct._object** %9, align 8
+  br label %40
 
-; <label>:44:                                     ; preds = %37
-  br label %52
+; <label>:40:                                     ; preds = %35
+  %41 = load %struct._object*, %struct._object** %4, align 8
+  store %struct._object* %41, %struct._object** %10, align 8
+  %42 = load %struct._object*, %struct._object** %10, align 8
+  %43 = getelementptr inbounds %struct._object, %struct._object* %42, i32 0, i32 0
+  %44 = load i64, i64* %43, align 8
+  %45 = add nsw i64 %44, -1
+  store i64 %45, i64* %43, align 8
+  %46 = icmp ne i64 %45, 0
+  br i1 %46, label %47, label %48
 
-; <label>:45:                                     ; preds = %37
-  %46 = load %struct._object*, %struct._object** %9, align 8
-  %47 = getelementptr inbounds %struct._object, %struct._object* %46, i32 0, i32 1
-  %48 = load %struct._typeobject*, %struct._typeobject** %47, align 8
-  %49 = getelementptr inbounds %struct._typeobject, %struct._typeobject* %48, i32 0, i32 4
-  %50 = load void (%struct._object*)*, void (%struct._object*)** %49, align 8
-  %51 = load %struct._object*, %struct._object** %9, align 8
-  call void %50(%struct._object* %51)
-  br label %52
+; <label>:47:                                     ; preds = %40
+  br label %55
 
-; <label>:52:                                     ; preds = %45, %44
-  br label %53
+; <label>:48:                                     ; preds = %40
+  %49 = load %struct._object*, %struct._object** %10, align 8
+  %50 = getelementptr inbounds %struct._object, %struct._object* %49, i32 0, i32 1
+  %51 = load %struct._typeobject*, %struct._typeobject** %50, align 8
+  %52 = getelementptr inbounds %struct._typeobject, %struct._typeobject* %51, i32 0, i32 4
+  %53 = load void (%struct._object*)*, void (%struct._object*)** %52, align 8
+  %54 = load %struct._object*, %struct._object** %10, align 8
+  call void %53(%struct._object* %54)
+  br label %55
 
-; <label>:53:                                     ; preds = %52
-  %54 = load %struct._object*, %struct._object** %8, align 8
-  ret %struct._object* %54
+; <label>:55:                                     ; preds = %48, %47
+  br label %56
+
+; <label>:56:                                     ; preds = %55
+  br label %57
+
+; <label>:57:                                     ; preds = %56
+  %58 = load %struct._object*, %struct._object** %5, align 8
+  store %struct._object* %58, %struct._object** %11, align 8
+  %59 = load %struct._object*, %struct._object** %11, align 8
+  %60 = getelementptr inbounds %struct._object, %struct._object* %59, i32 0, i32 0
+  %61 = load i64, i64* %60, align 8
+  %62 = add nsw i64 %61, -1
+  store i64 %62, i64* %60, align 8
+  %63 = icmp ne i64 %62, 0
+  br i1 %63, label %64, label %65
+
+; <label>:64:                                     ; preds = %57
+  br label %72
+
+; <label>:65:                                     ; preds = %57
+  %66 = load %struct._object*, %struct._object** %11, align 8
+  %67 = getelementptr inbounds %struct._object, %struct._object* %66, i32 0, i32 1
+  %68 = load %struct._typeobject*, %struct._typeobject** %67, align 8
+  %69 = getelementptr inbounds %struct._typeobject, %struct._typeobject* %68, i32 0, i32 4
+  %70 = load void (%struct._object*)*, void (%struct._object*)** %69, align 8
+  %71 = load %struct._object*, %struct._object** %11, align 8
+  call void %70(%struct._object* %71)
+  br label %72
+
+; <label>:72:                                     ; preds = %65, %64
+  br label %73
+
+; <label>:73:                                     ; preds = %72
+  %74 = load %struct._object*, %struct._object** %9, align 8
+  ret %struct._object* %74
 }
 
 declare dllimport %struct._object* @PyTuple_New(i64) #2
 
 ; Function Attrs: nounwind
-declare void @llvm.va_start(i8*) #3
+declare void @llvm.va_start(i8*) #4
 
 ; Function Attrs: nounwind
-declare void @llvm.va_end(i8*) #3
+declare void @llvm.va_end(i8*) #4
 
 declare dllimport %struct._object* @PyObject_Call(%struct._object*, %struct._object*, %struct._object*) #2
 
 attributes #0 = { noinline nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #1 = { noinline uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
 attributes #2 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "no-frame-pointer-elim"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { nounwind }
+attributes #3 = { noreturn nounwind }
+attributes #4 = { nounwind }
 
 !llvm.module.flags = !{!0, !4}
 !llvm.ident = !{!5}
