@@ -1,6 +1,8 @@
 #include "Python.h"
 #include "frameobject.h"
 
+#include <stdarg.h>
+
 extern "C" PyCodeObject *TempFunc1() { return nullptr; }
 
 extern "C" double ToDouble(PyObject *obj) {
@@ -148,27 +150,16 @@ extern "C" void StoreFast(PyFrameObject *frame, int idx, PyObject *val)
     Py_XDECREF(last);
 }
 
-extern "C" PyObject *CallFunction_0(PyObject *func)
+extern "C" PyObject *CallFunction(PyObject *func, int nargs, ...)
 {
-    PyObject *args = PyTuple_Pack(0);
+    PyObject *args = PyTuple_New(nargs);    
+    va_list argList;
+    va_start(argList, nargs);
+    for (int i = 0; i < nargs; ++i) {
+        PyTuple_SET_ITEM(args, i, va_arg(argList, PyObject *));
+    }
+    va_end(argList);
     PyObject *res = PyObject_Call(func, args, nullptr);
-    Py_DECREF(func);
-    return res;
-}
-
-extern "C" PyObject *CallFunction_1(PyObject *func, PyObject *arg1)
-{
-    PyObject *args = PyTuple_Pack(1, arg1);
-    PyObject *res = PyObject_CallObject(func, args);
-    //PyObject *res = PyObject_Call(func, args, nullptr);
-    Py_DECREF(func);
-    return res;
-}
-
-extern "C" PyObject *CallFunction_2(PyObject *func, PyObject *arg1, PyObject *arg2)
-{
-    PyObject *args = PyTuple_Pack(2, arg1, arg2);
-    PyObject *res  = PyObject_Call(func, args, nullptr);
     Py_DECREF(func);
     return res;
 }

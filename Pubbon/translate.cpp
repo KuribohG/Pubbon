@@ -44,8 +44,7 @@ Function *AsCond;
 Function *LoadGlobal;
 Function *LoadFast;
 Function *StoreFast;
-
-Function *CallFunction[3];
+Function *CallFunction;
 
 Function *ToDouble;
 Function *FromDouble;
@@ -95,13 +94,7 @@ void InitializeModule() {
     LoadGlobal = M->getFunction("LoadGlobal");
     LoadFast = M->getFunction("LoadFast");
     StoreFast = M->getFunction("StoreFast");
-
-    char nameCallFunc[20] = "CallFunction_";
-    for (int i = 0; i < 3; ++i)
-    {
-        sprintf(nameCallFunc + 13, "%d", i);
-        CallFunction[i] = M->getFunction(nameCallFunc);
-    }
+    CallFunction = M->getFunction("CallFunction");
     
     ToDouble = M->getFunction("ToDouble");
     FromDouble = M->getFunction("FromDouble");
@@ -319,12 +312,13 @@ bool Translate(PyFrameObject *frame) {
             break;
         }
         case CALL_FUNCTION: {
-            std::vector<Value *> args(oparg + 1, nullptr);
-            for (int j = 0; j <= oparg; ++j)
-                args[j] = stack[stackDepth - oparg - 1 + j];
+            std::vector<Value *> args(oparg + 2, nullptr);
+            args[0] = stack[stackDepth - oparg - 1];
+            args[1] = ConstantInt::get(Type::getInt32Ty(TheContext), (int32_t)oparg);
+            for (int j = 0; j < oparg; ++j)
+                args[j + 2] = stack[stackDepth - oparg + j];
             stackDepth -= oparg + 1;
-            if (oparg < 3) stack[stackDepth++] = Builder.CreateCall(CallFunction[oparg], args);
-            else flag = false;
+            stack[stackDepth++] = Builder.CreateCall(CallFunction, args);
             break;
         }
         case RETURN_VALUE: {
