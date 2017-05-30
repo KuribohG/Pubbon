@@ -127,7 +127,10 @@ extern "C" PyObject *LoadGlobal(PyFrameObject *frame, PyObject *name)
     PyObject *globals = frame->f_globals;
     PyObject *builtins = frame->f_builtins;
     PyObject *res = PyObject_GetItem(globals, name);
-    if (res == nullptr) res = PyObject_GetItem(builtins, name);
+    if (res == nullptr) {
+        PyErr_Clear();
+        res = PyObject_GetItem(builtins, name);
+    }
     return res;
 }
 
@@ -156,7 +159,8 @@ extern "C" PyObject *CallFunction_0(PyObject *func)
 extern "C" PyObject *CallFunction_1(PyObject *func, PyObject *arg1)
 {
     PyObject *args = PyTuple_Pack(1, arg1);
-    PyObject *res = PyObject_Call(func, args, nullptr);
+    PyObject *res = PyObject_CallObject(func, args);
+    //PyObject *res = PyObject_Call(func, args, nullptr);
     Py_DECREF(func);
     return res;
 }
