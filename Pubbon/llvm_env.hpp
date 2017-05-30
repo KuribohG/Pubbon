@@ -30,6 +30,10 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -39,38 +43,95 @@
 typedef PyObject *(*JittedFunc)(PyFrameObject *);
 
 extern llvm::LLVMContext TheContext;
-extern llvm::IRBuilder<> Builder;
-extern std::unique_ptr<llvm::Module> TheModule;
+
+using namespace llvm;
+using namespace llvm::orc;
 
 namespace llvm {
 namespace orc {
 
 class LlvmEnv {
     private:
-        ExecutionEngine *EE;
+        llvm::LLVMContext TheContext;
+        std::vector<llvm::Module *> Modules;
+        std::vector<ExecutionEngine *> Engines;
+        std::unique_ptr<Module> OpenModule;
 
     public:
-        LlvmEnv() {
-            std::string errStr;
-            EE = EngineBuilder(std::move(TheModule))
-                .setErrorStr(&errStr)
-                .create();
+        LlvmEnv(std::unique_ptr<Module> module) {
+            std::string ErrStr;
+            ExecutionEngine *EE = EngineBuilder(std::move(module))
+                                               .setErrorStr(&ErrStr)
+                                               .create();
+            Engines.push_back(EE);
+            EE->finalizeObject();
         }
 
-        JittedFunc get(PyObject *name, bool special=false) {
-            char *str = PyUnicode_AsUTF8(name);
-            JittedFunc func;
-            if (special) {
-                int len = strlen(str);
-                char *prefix = new char[len + 20];
-                strcpy(prefix, str);
-                const char *suffix = "_special";
-                strcat(prefix, suffix);
-                func = (JittedFunc)EE->getFunctionAddress(prefix);
+        llvm::Function *getFunction(const std::string Name) {
+            for (auto it = Modules.begin(); it != Modules.end(); ++it) {
+                llvm::Function *F = (*it)->getFunction(Name);
+                if (F) {
+                    if (*it == OpenModule.get()) {
+                        return F;
+                    }
+                    llvm::Function *PF = OpenModule->getFunction(Name);
+                    if (!PF) {
+                        PF = llvm::Function::Create(F->getFunctionType(),
+                                Function::ExternalLinkage, Name, OpenModule.get());
+                        return PF;
+                    }
+                }
             }
-            else func = (JittedFunc)EE->getFunctionAddress(str);
-            return func;
+            return nullptr;
         }
+
+        JittedFunc get(llvm::Function *F) {
+            for (auto it = Engines.begin(); it != Engines.end(); ++it) {
+                JittedFunc func = (JittedFunc)(*it)->getPointerToFunction(F);
+                if (func) {
+                    return func;
+                }
+            }
+            if (OpenModule.get()) {
+                std::string ErrStr;
+                Module *M = OpenModule.get();
+                ExecutionEngine *NewEngine = EngineBuilder(std::move(OpenModule))
+                                                          .setErrorStr(&ErrStr)
+                                                          .create();
+
+                auto fpm = new llvm::legacy::FunctionPassManager(OpenModule.get());
+                //fpm->add(new DataLayout(*NewEngine->getDataLayout()));
+    			//fpm->add(createBasicAAWrapperPass());
+    			//fpm->add(createPromoteMemoryToRegisterPass());
+    			fpm->add(createInstructionCombiningPass());
+    			fpm->add(createReassociatePass());
+    			fpm->add(createGVNPass());
+    			fpm->add(createCFGSimplificationPass());
+    			fpm->doInitialization();
+                for (auto it = M->begin(); it != M->end(); ++it) {
+                    fpm->run(*it);
+                }
+                delete fpm;
+                M->dump();
+                
+                OpenModule = nullptr;
+                Engines.push_back(NewEngine);
+                NewEngine->finalizeObject();
+                return (JittedFunc)NewEngine->getPointerToFunction(F);
+            }
+            return nullptr;
+        }
+
+        Module *getModuleForNewFunction(std::string name) {
+            if (OpenModule.get()) {
+                return OpenModule.get();
+            }
+            OpenModule = std::unique_ptr<Module>(new Module(name, TheContext));
+            Module *M = OpenModule.get();
+            Modules.push_back(M);
+            return M;
+        }
+
 };
 
 }

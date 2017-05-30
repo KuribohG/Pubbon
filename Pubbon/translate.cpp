@@ -3,6 +3,7 @@
 #include "opcode.h"
 #include "code.h"
 
+#include <iostream>
 #include <string>
 #include <vector>
 #include <stack>
@@ -15,8 +16,6 @@ LLVMContext TheContext;
 IRBuilder<> Builder(TheContext);
 std::unique_ptr<Module> TheModule;
 std::unique_ptr<LlvmEnv> TheJIT;
-Module *M;
-std::unique_ptr<legacy::FunctionPassManager> fpm;
 
 StructType *PyObjectTy, *PyCodeObjectTy, *PyFrameObjectTy;
 PointerType *PyObjectPtrTy, *PyCodeObjectPtrTy, *PyFrameObjectPtrTy;
@@ -51,9 +50,9 @@ Function *FromDouble;
 
 void InitializeModule() {
     SMDiagnostic err;
-    std::string source_file("F:\\Programming\\Python Compiler\\Pubbon\\Pubbon\\function.ll");
+    std::string source_file("/Users/zouyuheng/workspace/Pubbon/Pubbon/function.ll");
     TheModule = parseIRFile(source_file, err, TheContext);
-    M = TheModule.get();
+    Module *M = TheModule.get();
     PyObjectTy = TheModule->getTypeByName("struct._object");
     PyObjectPtrTy = PyObjectTy->getPointerTo();
     PyCodeObjectTy = TheModule->getTypeByName("struct.PyCodeObject");
@@ -62,14 +61,7 @@ void InitializeModule() {
     PyFrameObjectPtrTy = PyFrameObjectTy->getPointerTo();
     std::vector<Type*> param(1, PyFrameObjectPtrTy);
     funcType = FunctionType::get(PyObjectPtrTy, param, false);
-    TheJIT = make_unique<LlvmEnv>();
-
-    fpm = make_unique<legacy::FunctionPassManager>(M);
-    fpm->add(createInstructionCombiningPass());
-    fpm->add(createReassociatePass());
-    fpm->add(createGVNPass());
-    fpm->add(createCFGSimplificationPass());
-    fpm->doInitialization();
+    TheJIT = std::unique_ptr<LlvmEnv>(new LlvmEnv(std::move(TheModule)));
 
     TrueCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_True), PyObjectPtrTy);;
     FalseCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_False), PyObjectPtrTy);;
@@ -121,6 +113,7 @@ bool Translate(PyFrameObject *frame) {
     std::stack<Block> blockStack;
 
     char *str = PyUnicode_AsUTF8(code->co_name);
+    Module *M = TheJIT->getModuleForNewFunction(str);
     Function *newFunc = Function::Create(funcType, Function::ExternalLinkage, str, M);
     // BasicBlock *BB = BasicBlock::Create(TheContext, "entry", newFunc);
     // Builder.SetInsertPoint(BB);
@@ -337,9 +330,7 @@ bool Translate(PyFrameObject *frame) {
     if (!flag) newFunc->eraseFromParent();
     else
     {
-        newFunc->dump();
-        fpm->run(*newFunc);
-        newFunc->dump();
+        //newFunc->dump();
     }
     return flag;
 }
@@ -358,6 +349,7 @@ bool TranslateSpecial(PyFrameObject *frame) {
     auto size = PyBytes_Size(code->co_code) / sizeof(_Py_CODEUNIT);
 
     char *str = PyUnicode_AsUTF8(code->co_name);
+    Module *M = TheJIT->getModuleForNewFunction(str);
     int len = strlen(str);
     char *prefix = new char[len + 20];
     strcpy(prefix, str);
@@ -427,8 +419,7 @@ bool TranslateSpecial(PyFrameObject *frame) {
     if (!flag) newFunc->eraseFromParent();
     else
     {
-        fpm->run(*newFunc);
-        newFunc->dump();
+        //newFunc->dump();
     }
     return flag;
 }
