@@ -105,9 +105,13 @@ PyObject *eval_frame(PyFrameObject *frame, int throwflag) {
         PubbonJittedCode *jitted = (PubbonJittedCode *)extra;
 
         if (Py_TYPE(jitted) == &PubbonJittedCode_Type && !jitted->j_failed) {
-            if (jitted->j_evalfunc != nullptr) return jitted->j_evalfunc(frame);
+            if (jitted->j_evalfunc != nullptr) {
+                return jitted->j_evalfunc(frame);
+            }
             else if (jitted->j_run_count++ > HOT_CODE) {
-                if (jit_compile(frame)) return jitted->j_evalfunc(frame);
+                if (jit_compile(frame)) {
+                    return jitted->j_evalfunc(frame);
+                }
                 else jitted->j_failed = true;
             }
         }
