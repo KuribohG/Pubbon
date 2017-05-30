@@ -41,13 +41,18 @@ Function *SequenceContains;
 Function *SequenceNotContains;
 Function *RichCompare;
 Function *AsCond;
+Function *LoadGlobal;
+Function *LoadFast;
+Function *StoreFast;
+
+Function *CallFunction[3];
 
 Function *ToDouble;
 Function *FromDouble;
 
 void InitializeModule() {
     SMDiagnostic err;
-    std::string source_file("/Users/zouyuheng/workspace/Pubbon/Pubbon/function.ll");
+    std::string source_file("F:\\Programming\\Python Compiler\\Pubbon\\Pubbon\\function.ll");
     TheModule = parseIRFile(source_file, err, TheContext);
     M = TheModule.get();
     PyObjectTy = TheModule->getTypeByName("struct._object");
@@ -87,15 +92,29 @@ void InitializeModule() {
     SequenceNotContains = M->getFunction("SequenceNotContains");
     RichCompare = M->getFunction("RichCompare");
     AsCond = M->getFunction("AsCond");
+    LoadGlobal = M->getFunction("LoadGlobal");
+    LoadFast = M->getFunction("LoadFast");
+    StoreFast = M->getFunction("StoreFast");
+
+    char nameCallFunc[20] = "CallFunction_";
+    for (int i = 0; i < 3; ++i)
+    {
+        sprintf(nameCallFunc + 13, "%d", i);
+        CallFunction[i] = M->getFunction(nameCallFunc);
+    }
     
     ToDouble = M->getFunction("ToDouble");
     FromDouble = M->getFunction("FromDouble");
 }
 
+inline Value *AsConstantPtr(PyObject *val)
+{
+    ConstantInt *addressInt = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)val);
+    return ConstantExpr::getIntToPtr(addressInt, PyObjectPtrTy);
+}
+
 bool Translate(PyFrameObject *frame) {
     PyCodeObject *code = frame->f_code;
-    PyObject **fastlocals = frame->f_localsplus;
-    PyObject **freevars = frame->f_localsplus + code->co_nlocals;
     PyObject *names = code->co_names;
     PyObject *consts = code->co_consts;
 
@@ -112,6 +131,8 @@ bool Translate(PyFrameObject *frame) {
     Function *newFunc = Function::Create(funcType, Function::ExternalLinkage, str, M);
     // BasicBlock *BB = BasicBlock::Create(TheContext, "entry", newFunc);
     // Builder.SetInsertPoint(BB);
+    Argument *runFrame = &*newFunc->arg_begin();
+    runFrame->setName("frame");
 
     for (int i = 0; i < size; ++i) {
         auto opcode = _Py_OPCODE(byteCode[i]);
@@ -121,30 +142,28 @@ bool Translate(PyFrameObject *frame) {
         label[i]->insertInto(newFunc);
         Builder.SetInsertPoint(label[i]);
         switch (opcode) {
+        case LOAD_GLOBAL: {
+            PyObject *name = PyTuple_GetItem(names, oparg);
+            Value *val = Builder.CreateCall(LoadGlobal, std::vector<Value *>{runFrame, AsConstantPtr(name)});
+            stack[stackDepth++] = val;
+            break;
+        }
         case LOAD_CONST: {
-            ConstantInt *addressInt = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)PyTuple_GetItem(consts, oparg));
-            Value *val = ConstantExpr::getIntToPtr(addressInt, PyObjectPtrTy);
+            Value *val = AsConstantPtr(PyTuple_GetItem(consts, oparg));
             Builder.CreateCall(PyIncref, std::vector<Value *>{val});
             stack[stackDepth++] = val;
             break;
         }
         case LOAD_FAST: {
-            ConstantInt *idx = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)oparg);
-            ConstantInt *addressInt = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)fastlocals);
-            Constant *ptr = ConstantExpr::getGetElementPtr(PyObjectPtrTy, ConstantExpr::getIntToPtr(addressInt, PyObjectPtrTy->getPointerTo()), idx);
-            Value *val = Builder.CreateLoad(ptr);
-            Builder.CreateCall(PyIncref, std::vector<Value *>{val});
+            ConstantInt *idx = ConstantInt::get(Type::getInt32Ty(TheContext), (int32_t)oparg);
+            Value *val = Builder.CreateCall(LoadFast, std::vector<Value *>{runFrame, idx});
             stack[stackDepth++] = val;
             break;
         }
         case STORE_FAST: {
-            ConstantInt *idx = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)oparg);
-            ConstantInt *addressInt = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)fastlocals);
-            Constant *ptr = ConstantExpr::getGetElementPtr(PyObjectPtrTy, ConstantExpr::getIntToPtr(addressInt, PyObjectPtrTy->getPointerTo()), idx);
-            Value *last = Builder.CreateLoad(ptr);
+            ConstantInt *idx = ConstantInt::get(Type::getInt32Ty(TheContext), (int32_t)oparg);
             Value *val = stack[--stackDepth];
-            Builder.CreateStore(val, ptr);
-            Builder.CreateCall(PyXDecref, std::vector<Value *>{last});
+            Builder.CreateCall(StoreFast, std::vector<Value *>{runFrame, idx, val});
             break;
         }
         case JUMP_FORWARD: {
@@ -292,6 +311,20 @@ bool Translate(PyFrameObject *frame) {
             Value *right = stack[--stackDepth];
             Value *left = stack[--stackDepth];
             stack[stackDepth++] = Builder.CreateCall(InplaceSubtract, std::vector<Value *>{left, right});
+            break;
+        }
+        case POP_TOP: {
+            Value *val = stack[--stackDepth];
+            Builder.CreateCall(PyDecref, std::vector<Value *>{val});
+            break;
+        }
+        case CALL_FUNCTION: {
+            std::vector<Value *> args(oparg + 1, nullptr);
+            for (int j = 0; j <= oparg; ++j)
+                args[j] = stack[stackDepth - oparg - 1 + j];
+            stackDepth -= oparg + 1;
+            if (oparg < 3) stack[stackDepth++] = Builder.CreateCall(CallFunction[oparg], args);
+            else flag = false;
             break;
         }
         case RETURN_VALUE: {

@@ -3,8 +3,6 @@
 
 extern "C" PyCodeObject *TempFunc1() { return nullptr; }
 
-extern "C" PyFrameObject *TempFunc2() { return nullptr; }
-
 extern "C" double ToDouble(PyObject *obj) {
     return ((PyFloatObject *)(obj))->ob_fval;
 }
@@ -122,4 +120,51 @@ extern "C" bool AsCond(PyObject *cond)
     if (cond == Py_True) return true;
     else if (cond == Py_False) return false;
     else return PyObject_IsTrue(cond) > 0;
+}
+
+extern "C" PyObject *LoadGlobal(PyFrameObject *frame, PyObject *name)
+{
+    PyObject *globals = frame->f_globals;
+    PyObject *builtins = frame->f_builtins;
+    PyObject *res = PyObject_GetItem(globals, name);
+    if (res == nullptr) res = PyObject_GetItem(builtins, name);
+    return res;
+}
+
+extern "C" PyObject *LoadFast(PyFrameObject *frame, int idx)
+{
+    PyObject *res = frame->f_localsplus[idx];
+    Py_INCREF(res);
+    return res;
+}
+
+extern "C" void StoreFast(PyFrameObject *frame, int idx, PyObject *val)
+{
+    PyObject *last = frame->f_localsplus[idx];
+    frame->f_localsplus[idx] = val;
+    Py_XDECREF(last);
+}
+
+extern "C" PyObject *CallFunction_0(PyObject *func)
+{
+    PyObject *args = PyTuple_Pack(0);
+    PyObject *res = PyObject_Call(func, args, nullptr);
+    Py_DECREF(func);
+    return res;
+}
+
+extern "C" PyObject *CallFunction_1(PyObject *func, PyObject *arg1)
+{
+    PyObject *args = PyTuple_Pack(1, arg1);
+    PyObject *res = PyObject_Call(func, args, nullptr);
+    Py_DECREF(func);
+    return res;
+}
+
+extern "C" PyObject *CallFunction_2(PyObject *func, PyObject *arg1, PyObject *arg2)
+{
+    PyObject *args = PyTuple_Pack(2, arg1, arg2);
+    PyObject *res  = PyObject_Call(func, args, nullptr);
+    Py_DECREF(func);
+    return res;
 }

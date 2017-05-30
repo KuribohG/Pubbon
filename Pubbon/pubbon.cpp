@@ -53,21 +53,21 @@ bool jit_compile(PyFrameObject *frame) {
     // use CPython API, otherwise it produce segfault
     _PyCode_GetExtra((PyObject *)code, coIdx, (void **)&extra);
     PubbonJittedCode *jittedCode = (PubbonJittedCode *)extra;
-    /*
+    
     if (Translate(frame))
     {
         jittedCode->j_evalfunc = TheJIT->get(code->co_name);
         // jittedCode->j_evalstate = nullptr;
-        printf("** Compiled and succeeded!\n");
+        printf("** Compiled @%s and succeeded!\n", PyUnicode_AsUTF8(code->co_name));
         return true;
     }
     else
     {
-        printf("** Compiled and failed!\n");
+        printf("** Compiled @%s and failed!\n", PyUnicode_AsUTF8(code->co_name));
         return false;
     }
-    */
-    if (TranslateSpecial(frame))
+    
+/*  if (TranslateSpecial(frame))
     {
         jittedCode->j_evalfunc = TheJIT->get(code->co_name, true);
         return true;
@@ -76,7 +76,7 @@ bool jit_compile(PyFrameObject *frame) {
     {
         printf("** Compiled and failed!\n");
         return false;
-    }
+    }*/
 }
 
 static PY_UINT64_T HOT_CODE = 4;
@@ -84,9 +84,9 @@ static PY_UINT64_T HOT_CODE = 4;
 PyObject *eval_frame(PyFrameObject *frame, int throwflag) {
     // frame information
     // printf("** Pubbon is evaluating frame = %p, lasti = %d, lineno = %d, throwflag = %d\n", frame, frame->f_lasti, frame->f_lineno, throwflag);
-    wchar_t *str = PyUnicode_AsWideCharString(frame->f_code->co_name, nullptr);
+    // wchar_t *str = PyUnicode_AsWideCharString(frame->f_code->co_name, nullptr);
     // printf("** name = %ls, argcount = %d, kwonlyargcount = %d, co_nlocals = %d\n", str, frame->f_code->co_argcount, frame->f_code->co_kwonlyargcount, frame->f_code->co_nlocals);
-    PyMem_Free(str);
+    // PyMem_Free(str);
 
     PyObject *extra = nullptr;
     _PyCode_GetExtra((PyObject *)frame->f_code, coIdx, (void **)&extra);

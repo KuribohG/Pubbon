@@ -59,12 +59,16 @@ class LlvmEnv {
 
         JittedFunc get(PyObject *name, bool special=false) {
             char *str = PyUnicode_AsUTF8(name);
+            JittedFunc func;
             if (special) {
+                int len = strlen(str);
+                char *prefix = new char[len + 20];
+                strcpy(prefix, str);
                 const char *suffix = "_special";
-                strcat(str, suffix);
+                strcat(prefix, suffix);
+                func = (JittedFunc)EE->getFunctionAddress(prefix);
             }
-            printf("%s\n", str);
-            JittedFunc func = (JittedFunc)EE->getFunctionAddress(str);
+            else func = (JittedFunc)EE->getFunctionAddress(str);
             return func;
         }
 };
