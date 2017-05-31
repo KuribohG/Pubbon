@@ -32,7 +32,7 @@ metadata = dict(
     },
     ext_modules=[
         Extension(name='pubbon',
-                  sources=['Pubbon/pubbon.cpp', 'Pubbon/translate.cpp'],
+                  sources=['Pubbon/pubbon.cpp', 'Pubbon/translate.cpp', 'Pubbon/llvm_env.cpp'],
                   include_dirs=includeDirs,
                   library_dirs=libraryDirs,
                   define_macros=defineMacros,
