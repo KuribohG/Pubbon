@@ -72,6 +72,9 @@ class LlvmEnv {
 };
 
 class HelpingMemoryManager : public SectionMemoryManager {
+    HelpingMemoryManager(const HelpingMemoryManager&) = delete;
+    void operator=(const HelpingMemoryManager&) = delete;
+
 public:
 	HelpingMemoryManager(LlvmEnv *Helper) : MasterHelper(Helper) {}
     virtual ~HelpingMemoryManager() {}

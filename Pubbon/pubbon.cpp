@@ -6,6 +6,7 @@
 #include "llvm_env.hpp"
 #include "translate.hpp"
 #include "pubbon.hpp"
+#include "llvm/IR/Verifier.h"
 
 static Py_ssize_t coIdx;
 

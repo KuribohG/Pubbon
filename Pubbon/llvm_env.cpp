@@ -9,11 +9,7 @@ namespace orc {
 LlvmEnv::LlvmEnv(std::unique_ptr<Module> module) {
     std::string ErrStr;
     Modules.push_back(module.get());
-    ExecutionEngine *EE = EngineBuilder(std::move(module))
-                                       .setErrorStr(&ErrStr)
-                                       .create();
-    Engines.push_back(EE);
-    EE->finalizeObject();
+    OpenModule = std::move(module);
 }
 
 llvm::Function *LlvmEnv::getFunction(const std::string Name) {
@@ -27,8 +23,8 @@ llvm::Function *LlvmEnv::getFunction(const std::string Name) {
             if (!PF) {
                 PF = llvm::Function::Create(F->getFunctionType(),
                         Function::ExternalLinkage, Name, OpenModule.get());
-                return PF;
             }
+            return PF;
         }
     }
     return nullptr;
@@ -60,6 +56,9 @@ void *HelpingMemoryManager::getPointerToNamedFunction(const std::string &Name, b
     	return pfn;
 
   	pfn = MasterHelper->getPointerToNamedFunction(Name);
+    if (!pfn && AbortOnFailure) {
+        report_fatal_error("Not found function in IR");
+    }
   	return pfn;
 }
 
@@ -81,8 +80,8 @@ void *LlvmEnv::getPointerToFunction(llvm::Function *F) {
 
         auto fpm = new llvm::legacy::FunctionPassManager(OpenModule.get());
         //fpm->add(new DataLayout(*NewEngine->getDataLayout()));
-        //fpm->add(createBasicAAWrapperPass());
-        //fpm->add(createPromoteMemoryToRegisterPass());
+        fpm->add(createBasicAAWrapperPass());
+        fpm->add(createPromoteMemoryToRegisterPass());
         fpm->add(createInstructionCombiningPass());
         fpm->add(createReassociatePass());
         fpm->add(createGVNPass());
@@ -92,6 +91,7 @@ void *LlvmEnv::getPointerToFunction(llvm::Function *F) {
             fpm->run(*it);
         }
         delete fpm;
+        //M->dump();
 
         OpenModule = nullptr;
         Engines.push_back(NewEngine);

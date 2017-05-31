@@ -9,13 +9,15 @@
 #include <stack>
 #include <memory>
 
+#include "llvm/IR/Verifier.h"
+
 using namespace llvm;
 using namespace llvm::orc;
 
 LLVMContext TheContext;
 IRBuilder<> Builder(TheContext);
 std::unique_ptr<Module> TheModule;
-std::unique_ptr<LlvmEnv> TheJIT;
+LlvmEnv *TheJIT;
 
 StructType *PyObjectTy, *PyCodeObjectTy, *PyFrameObjectTy;
 PointerType *PyObjectPtrTy, *PyCodeObjectPtrTy, *PyFrameObjectPtrTy;
@@ -52,7 +54,6 @@ void InitializeModule() {
     SMDiagnostic err;
     std::string source_file("/Users/zouyuheng/workspace/Pubbon/Pubbon/function.ll");
     TheModule = parseIRFile(source_file, err, TheContext);
-    Module *M = TheModule.get();
     PyObjectTy = TheModule->getTypeByName("struct._object");
     PyObjectPtrTy = PyObjectTy->getPointerTo();
     PyCodeObjectTy = TheModule->getTypeByName("struct.PyCodeObject");
@@ -61,35 +62,35 @@ void InitializeModule() {
     PyFrameObjectPtrTy = PyFrameObjectTy->getPointerTo();
     std::vector<Type*> param(1, PyFrameObjectPtrTy);
     funcType = FunctionType::get(PyObjectPtrTy, param, false);
-    TheJIT = std::unique_ptr<LlvmEnv>(new LlvmEnv(std::move(TheModule)));
+    TheJIT = new LlvmEnv(std::move(TheModule));
 
     TrueCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_True), PyObjectPtrTy);;
     FalseCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_False), PyObjectPtrTy);;
-
-    PyIncref = M->getFunction("PyIncref");
-    PyDecref = M->getFunction("PyDecref");
-    PyXDecref = M->getFunction("PyXDecref");
-    BinaryAdd = M->getFunction("BinaryAdd");
-    BinarySubtract = M->getFunction("BinarySubtract");
-    BinarySubscr = M->getFunction("BinarySubscr");
-    BinaryLshift = M->getFunction("BinaryLshift");
-    BinaryRshift = M->getFunction("BinaryRshift");
-    BinaryAnd = M->getFunction("BinaryAnd");
-    BinaryXor = M->getFunction("BinaryXor");
-    BinaryOr = M->getFunction("BinaryOr");
-    InplaceAdd = M->getFunction("InplaceAdd");
-    InplaceSubtract = M->getFunction("InplaceSubtract");
-    SequenceContains = M->getFunction("SequenceContains");
-    SequenceNotContains = M->getFunction("SequenceNotContains");
-    RichCompare = M->getFunction("RichCompare");
-    AsCond = M->getFunction("AsCond");
-    LoadGlobal = M->getFunction("LoadGlobal");
-    LoadFast = M->getFunction("LoadFast");
-    StoreFast = M->getFunction("StoreFast");
-    CallFunction = M->getFunction("CallFunction");
-    
-    ToDouble = M->getFunction("ToDouble");
-    FromDouble = M->getFunction("FromDouble");
+	/*
+    PyIncref = TheJIT->getFunction("PyIncref");
+    PyDecref = TheJIT->getFunction("PyDecref");
+    PyXDecref = TheJIT->getFunction("PyXDecref");
+    BinaryAdd = TheJIT->getFunction("BinaryAdd");
+    BinarySubtract = TheJIT->getFunction("BinarySubtract");
+    BinarySubscr = TheJIT->getFunction("BinarySubscr");
+    BinaryLshift = TheJIT->getFunction("BinaryLshift");
+    BinaryRshift = TheJIT->getFunction("BinaryRshift");
+    BinaryAnd = TheJIT->getFunction("BinaryAnd");
+    BinaryXor = TheJIT->getFunction("BinaryXor");
+    BinaryOr = TheJIT->getFunction("BinaryOr");
+    InplaceAdd = TheJIT->getFunction("InplaceAdd");
+    InplaceSubtract = TheJIT->getFunction("InplaceSubtract");
+    SequenceContains = TheJIT->getFunction("SequenceContains");
+    SequenceNotContains = TheJIT->getFunction("SequenceNotContains");
+    RichCompare = TheJIT->getFunction("RichCompare");
+    AsCond = TheJIT->getFunction("AsCond");
+    LoadGlobal = TheJIT->getFunction("LoadGlobal");
+    LoadFast = TheJIT->getFunction("LoadFast");
+    StoreFast = TheJIT->getFunction("StoreFast");
+    CallFunction = TheJIT->getFunction("CallFunction");
+    */
+    ToDouble = TheJIT->getFunction("ToDouble");
+    FromDouble = TheJIT->getFunction("FromDouble");
 }
 
 inline Value *AsConstantPtr(PyObject *val)
@@ -114,6 +115,29 @@ bool Translate(PyFrameObject *frame) {
 
     char *str = PyUnicode_AsUTF8(code->co_name);
     Module *M = TheJIT->getModuleForNewFunction(str);
+
+    PyIncref = TheJIT->getFunction("PyIncref");
+    PyDecref = TheJIT->getFunction("PyDecref");
+    PyXDecref = TheJIT->getFunction("PyXDecref");
+    BinaryAdd = TheJIT->getFunction("BinaryAdd");
+    BinarySubtract = TheJIT->getFunction("BinarySubtract");
+    BinarySubscr = TheJIT->getFunction("BinarySubscr");
+    BinaryLshift = TheJIT->getFunction("BinaryLshift");
+    BinaryRshift = TheJIT->getFunction("BinaryRshift");
+    BinaryAnd = TheJIT->getFunction("BinaryAnd");
+    BinaryXor = TheJIT->getFunction("BinaryXor");
+    BinaryOr = TheJIT->getFunction("BinaryOr");
+    InplaceAdd = TheJIT->getFunction("InplaceAdd");
+    InplaceSubtract = TheJIT->getFunction("InplaceSubtract");
+    SequenceContains = TheJIT->getFunction("SequenceContains");
+    SequenceNotContains = TheJIT->getFunction("SequenceNotContains");
+    RichCompare = TheJIT->getFunction("RichCompare");
+    AsCond = TheJIT->getFunction("AsCond");
+    LoadGlobal = TheJIT->getFunction("LoadGlobal");
+    LoadFast = TheJIT->getFunction("LoadFast");
+    StoreFast = TheJIT->getFunction("StoreFast");
+    CallFunction = TheJIT->getFunction("CallFunction");
+
     Function *newFunc = Function::Create(funcType, Function::ExternalLinkage, str, M);
     // BasicBlock *BB = BasicBlock::Create(TheContext, "entry", newFunc);
     // Builder.SetInsertPoint(BB);
