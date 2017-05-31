@@ -52,36 +52,17 @@ namespace orc {
 
 class LlvmEnv {
     private:
-        llvm::LLVMContext TheContext;
-        std::vector<llvm::Module *> Modules;
-        std::vector<ExecutionEngine *> Engines;
+        ExecutionEngine *EE;
         std::unique_ptr<Module> OpenModule;
 
     public:
         LlvmEnv(std::unique_ptr<Module> module);
 
-        llvm::Function *getFunction(const std::string Name);
+        JittedFunc get(const std::string Name);
         
-        void *getPointerToNamedFunction(const std::string &Name, bool AbortOnFailure = true);
-
-        void *getPointerToFunction(llvm::Function *F);
-
-        JittedFunc get(llvm::Function *F);
-
-        Module *getModuleForNewFunction(std::string name);
-};
-
-class HelpingMemoryManager : public SectionMemoryManager {
-    HelpingMemoryManager(const HelpingMemoryManager&) = delete;
-    void operator=(const HelpingMemoryManager&) = delete;
-
-public:
-	HelpingMemoryManager(LlvmEnv *Helper) : MasterHelper(Helper) {}
-    virtual ~HelpingMemoryManager() {}
-    virtual void *getPointerToNamedFunction(const std::string &Name, bool AbortOnFailure = true);
-
-private:
-    LlvmEnv *MasterHelper;
+        Module *getModuleForNewFunction(const std::string Name);
+        
+        Function *getFunction(const std::string Name);
 };
 
 }

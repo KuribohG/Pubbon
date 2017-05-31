@@ -8,99 +8,38 @@ namespace orc {
 
 LlvmEnv::LlvmEnv(std::unique_ptr<Module> module) {
     std::string ErrStr;
-    Modules.push_back(module.get());
-    OpenModule = std::move(module);
+    EE = EngineBuilder(std::move(module))
+                      .setErrorStr(&ErrStr)
+                      .create();
 }
 
-llvm::Function *LlvmEnv::getFunction(const std::string Name) {
-    for (auto it = Modules.begin(); it != Modules.end(); ++it) {
-        llvm::Function *F = (*it)->getFunction(Name);
-        if (F) {
-            if (*it == OpenModule.get()) {
-                return F;
-            }
-            llvm::Function *PF = OpenModule->getFunction(Name);
-            if (!PF) {
-                PF = llvm::Function::Create(F->getFunctionType(),
-                        Function::ExternalLinkage, Name, OpenModule.get());
-            }
-            return PF;
-        }
+JittedFunc LlvmEnv::get(const std::string Name) {
+    if (OpenModule) {
+        EE->addModule(std::move(OpenModule));
+        EE->finalizeObject();
+        OpenModule = nullptr;
     }
-    return nullptr;
+    return (JittedFunc)EE->getFunctionAddress(Name);
 }
 
-void *LlvmEnv::getPointerToNamedFunction(const std::string &Name, bool AbortOnFailure) {
-    llvm::Function *func = getFunction(Name);
-    return getPointerToFunction(func);
-}
-
-JittedFunc LlvmEnv::get(llvm::Function *F) {
-    return JittedFunc(getPointerToFunction(F));
-}
-
-Module *LlvmEnv::getModuleForNewFunction(std::string name) {
-    if (OpenModule.get()) {
+Module *LlvmEnv::getModuleForNewFunction(const std::string name) {
+    if (OpenModule) {
         return OpenModule.get();
     }
     OpenModule = std::unique_ptr<Module>(new Module(name, TheContext));
-    Module *M = OpenModule.get();
-    Modules.push_back(M);
-    return M;
+    return OpenModule.get();
 }
 
-void *HelpingMemoryManager::getPointerToNamedFunction(const std::string &Name, bool AbortOnFailure)
-{
-	void *pfn = SectionMemoryManager::getPointerToNamedFunction(Name, false);
-	if (pfn)
-    	return pfn;
-
-  	pfn = MasterHelper->getPointerToNamedFunction(Name);
-    if (!pfn && AbortOnFailure) {
-        report_fatal_error("Not found function in IR");
-    }
-  	return pfn;
-}
-
-
-void *LlvmEnv::getPointerToFunction(llvm::Function *F) {
-    for (auto it = Engines.begin(); it != Engines.end(); ++it) {
-        void *func = (*it)->getPointerToFunction(F);
-        if (func) {
-            return func;
-        }
-    }
-    if (OpenModule.get()) {
-        std::string ErrStr;
-        Module *M = OpenModule.get();
-        ExecutionEngine *NewEngine = EngineBuilder(std::move(OpenModule))
-                                                  .setErrorStr(&ErrStr)
-										          .setMCJITMemoryManager(std::unique_ptr<HelpingMemoryManager>(new HelpingMemoryManager(this)))
-                                                  .create();
-
-        auto fpm = new llvm::legacy::FunctionPassManager(OpenModule.get());
-        //fpm->add(new DataLayout(*NewEngine->getDataLayout()));
-        fpm->add(createBasicAAWrapperPass());
-        fpm->add(createPromoteMemoryToRegisterPass());
-        fpm->add(createInstructionCombiningPass());
-        fpm->add(createReassociatePass());
-        fpm->add(createGVNPass());
-        fpm->add(createCFGSimplificationPass());
-        fpm->doInitialization();
-        for (auto it = M->begin(); it != M->end(); ++it) {
-            fpm->run(*it);
-        }
-        delete fpm;
-        //M->dump();
-
-        OpenModule = nullptr;
-        Engines.push_back(NewEngine);
-        NewEngine->finalizeObject();
-        return NewEngine->getPointerToFunction(F);
+Function *LlvmEnv::getFunction(const std::string Name) {
+    Function *F = EE->FindFunctionNamed(Name);
+    Function *PF = OpenModule->getFunction(Name);
+    if (!PF) {
+        PF = Function::Create(F->getFunctionType(),
+                Function::ExternalLinkage, Name, OpenModule.get());
+        return PF;
     }
     return nullptr;
 }
-
 
 }
 }

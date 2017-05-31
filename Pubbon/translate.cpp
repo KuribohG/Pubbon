@@ -19,7 +19,7 @@ IRBuilder<> Builder(TheContext);
 std::unique_ptr<Module> TheModule;
 LlvmEnv *TheJIT;
 
-StructType *PyObjectTy, *PyCodeObjectTy, *PyFrameObjectTy;
+StructType *PyObjectTy, *PyCodeObjectTy, *PyFrameObjectTy, *PyLongObjectTy;
 PointerType *PyObjectPtrTy, *PyCodeObjectPtrTy, *PyFrameObjectPtrTy;
 FunctionType *funcType;
 
@@ -56,6 +56,7 @@ void InitializeModule() {
     TheModule = parseIRFile(source_file, err, TheContext);
     PyObjectTy = TheModule->getTypeByName("struct._object");
     PyObjectPtrTy = PyObjectTy->getPointerTo();
+    PyLongObjectTy = TheModule->getTypeByName("struct._longobject");
     PyCodeObjectTy = TheModule->getTypeByName("struct.PyCodeObject");
     PyCodeObjectPtrTy = PyCodeObjectTy->getPointerTo();
     PyFrameObjectTy = TheModule->getTypeByName("struct._frame");
@@ -64,8 +65,10 @@ void InitializeModule() {
     funcType = FunctionType::get(PyObjectPtrTy, param, false);
     TheJIT = new LlvmEnv(std::move(TheModule));
 
-    TrueCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_True), PyObjectPtrTy);;
-    FalseCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_False), PyObjectPtrTy);;
+    /*
+    TrueCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_True), PyObjectPtrTy);
+    FalseCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_False), PyObjectPtrTy);
+    */
 	/*
     PyIncref = TheJIT->getFunction("PyIncref");
     PyDecref = TheJIT->getFunction("PyDecref");
@@ -89,8 +92,10 @@ void InitializeModule() {
     StoreFast = TheJIT->getFunction("StoreFast");
     CallFunction = TheJIT->getFunction("CallFunction");
     */
+    /*
     ToDouble = TheJIT->getFunction("ToDouble");
     FromDouble = TheJIT->getFunction("FromDouble");
+    */
 }
 
 inline Value *AsConstantPtr(PyObject *val)
@@ -116,6 +121,9 @@ bool Translate(PyFrameObject *frame) {
     char *str = PyUnicode_AsUTF8(code->co_name);
     Module *M = TheJIT->getModuleForNewFunction(str);
 
+    M->getOrInsertGlobal("_Py_TrueStruct", PyLongObjectTy);
+    M->getOrInsertGlobal("_Py_FalseStruct", PyLongObjectTy);
+
     PyIncref = TheJIT->getFunction("PyIncref");
     PyDecref = TheJIT->getFunction("PyDecref");
     PyXDecref = TheJIT->getFunction("PyXDecref");
@@ -137,6 +145,9 @@ bool Translate(PyFrameObject *frame) {
     LoadFast = TheJIT->getFunction("LoadFast");
     StoreFast = TheJIT->getFunction("StoreFast");
     CallFunction = TheJIT->getFunction("CallFunction");
+
+    TrueCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_True), PyObjectPtrTy);
+    FalseCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_False), PyObjectPtrTy);
 
     Function *newFunc = Function::Create(funcType, Function::ExternalLinkage, str, M);
     // BasicBlock *BB = BasicBlock::Create(TheContext, "entry", newFunc);
