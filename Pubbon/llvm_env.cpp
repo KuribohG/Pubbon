@@ -10,6 +10,7 @@ LlvmEnv::LlvmEnv(std::unique_ptr<Module> module) {
     std::string ErrStr;
     EE = EngineBuilder(std::move(module))
                       .setErrorStr(&ErrStr)
+                      .setOptLevel(CodeGenOpt::Aggressive)
                       .create();
 }
 
