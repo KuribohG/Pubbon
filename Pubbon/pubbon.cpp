@@ -6,6 +6,7 @@
 #include "llvm_env.hpp"
 #include "translate.hpp"
 #include "pubbon.hpp"
+#include "llvm/IR/Verifier.h"
 
 static Py_ssize_t coIdx;
 
@@ -56,7 +57,8 @@ bool jit_compile(PyFrameObject *frame) {
     
     if (Translate(frame))
     {
-        jittedCode->j_evalfunc = TheJIT->get(code->co_name);
+        char *str = PyUnicode_AsUTF8(code->co_name);
+        jittedCode->j_evalfunc = TheJIT->get(str);
         // jittedCode->j_evalstate = nullptr;
         printf("** Compiled @%s and succeeded!\n", PyUnicode_AsUTF8(code->co_name));
         return true;
@@ -84,9 +86,9 @@ static PY_UINT64_T HOT_CODE = 4;
 PyObject *eval_frame(PyFrameObject *frame, int throwflag) {
     // frame information
     // printf("** Pubbon is evaluating frame = %p, lasti = %d, lineno = %d, throwflag = %d\n", frame, frame->f_lasti, frame->f_lineno, throwflag);
-    // wchar_t *str = PyUnicode_AsWideCharString(frame->f_code->co_name, nullptr);
-    // printf("** name = %ls, argcount = %d, kwonlyargcount = %d, co_nlocals = %d\n", str, frame->f_code->co_argcount, frame->f_code->co_kwonlyargcount, frame->f_code->co_nlocals);
-    // PyMem_Free(str);
+    //wchar_t *str = PyUnicode_AsWideCharString(frame->f_code->co_name, nullptr);
+    //printf("** name = %ls, argcount = %d, kwonlyargcount = %d, co_nlocals = %d\n", str, frame->f_code->co_argcount, frame->f_code->co_kwonlyargcount, frame->f_code->co_nlocals);
+    //PyMem_Free(str);
 
     PyObject *extra = nullptr;
     _PyCode_GetExtra((PyObject *)frame->f_code, coIdx, (void **)&extra);
@@ -101,12 +103,15 @@ PyObject *eval_frame(PyFrameObject *frame, int throwflag) {
     }
     else if (!throwflag) {
         PubbonJittedCode *jitted = (PubbonJittedCode *)extra;
-        // printf("** jitted run_count: %llu\n", jitted->j_run_count);
 
         if (Py_TYPE(jitted) == &PubbonJittedCode_Type && !jitted->j_failed) {
-            if (jitted->j_evalfunc != nullptr) return jitted->j_evalfunc(frame);
+            if (jitted->j_evalfunc != nullptr) {
+                return jitted->j_evalfunc(frame);
+            }
             else if (jitted->j_run_count++ > HOT_CODE) {
-                if (jit_compile(frame)) return jitted->j_evalfunc(frame);
+                if (jit_compile(frame)) {
+                    return jitted->j_evalfunc(frame);
+                }
                 else jitted->j_failed = true;
             }
         }

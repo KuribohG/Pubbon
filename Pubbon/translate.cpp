@@ -3,10 +3,13 @@
 #include "opcode.h"
 #include "code.h"
 
+#include <iostream>
 #include <string>
 #include <vector>
 #include <stack>
 #include <memory>
+
+#include "llvm/IR/Verifier.h"
 
 using namespace llvm;
 using namespace llvm::orc;
@@ -14,11 +17,9 @@ using namespace llvm::orc;
 LLVMContext TheContext;
 IRBuilder<> Builder(TheContext);
 std::unique_ptr<Module> TheModule;
-std::unique_ptr<LlvmEnv> TheJIT;
-Module *M;
-std::unique_ptr<legacy::FunctionPassManager> fpm;
+LlvmEnv *TheJIT;
 
-StructType *PyObjectTy, *PyCodeObjectTy, *PyFrameObjectTy;
+StructType *PyObjectTy, *PyCodeObjectTy, *PyFrameObjectTy, *PyLongObjectTy;
 PointerType *PyObjectPtrTy, *PyCodeObjectPtrTy, *PyFrameObjectPtrTy;
 FunctionType *funcType;
 
@@ -55,57 +56,23 @@ Function *FromDouble;
 
 void InitializeModule() {
     SMDiagnostic err;
-    std::string source_file("F:\\Programming\\Python Compiler\\Pubbon\\Pubbon\\function.ll");
+    std::string source_file("/Users/zouyuheng/workspace/Pubbon/Pubbon/function.ll");
     TheModule = parseIRFile(source_file, err, TheContext);
-    M = TheModule.get();
     PyObjectTy = TheModule->getTypeByName("struct._object");
     PyObjectPtrTy = PyObjectTy->getPointerTo();
+    PyLongObjectTy = TheModule->getTypeByName("struct._longobject");
     PyCodeObjectTy = TheModule->getTypeByName("struct.PyCodeObject");
     PyCodeObjectPtrTy = PyCodeObjectTy->getPointerTo();
     PyFrameObjectTy = TheModule->getTypeByName("struct._frame");
     PyFrameObjectPtrTy = PyFrameObjectTy->getPointerTo();
     std::vector<Type*> param(1, PyFrameObjectPtrTy);
     funcType = FunctionType::get(PyObjectPtrTy, param, false);
-    TheJIT = make_unique<LlvmEnv>();
+    TheJIT = new LlvmEnv(std::move(TheModule));
 
-    fpm = make_unique<legacy::FunctionPassManager>(M);
-    fpm->add(createInstructionCombiningPass());
-    fpm->add(createReassociatePass());
-    fpm->add(createGVNPass());
-    fpm->add(createCFGSimplificationPass());
-    fpm->doInitialization();
-
-    TrueCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_True), PyObjectPtrTy);;
-    FalseCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_False), PyObjectPtrTy);;
-
-    PyIncref = M->getFunction("PyIncref");
-    PyDecref = M->getFunction("PyDecref");
-    PyXDecref = M->getFunction("PyXDecref");
-    BinaryAdd = M->getFunction("BinaryAdd");
-    BinarySubtract = M->getFunction("BinarySubtract");
-    BinarySubscr = M->getFunction("BinarySubscr");
-    BinaryLshift = M->getFunction("BinaryLshift");
-    BinaryRshift = M->getFunction("BinaryRshift");
-    BinaryAnd = M->getFunction("BinaryAnd");
-    BinaryXor = M->getFunction("BinaryXor");
-    BinaryOr = M->getFunction("BinaryOr");
-    InplaceAdd = M->getFunction("InplaceAdd");
-    InplaceSubtract = M->getFunction("InplaceSubtract");
-    SequenceContains = M->getFunction("SequenceContains");
-    SequenceNotContains = M->getFunction("SequenceNotContains");
-    RichCompare = M->getFunction("RichCompare");
-    AsCond = M->getFunction("AsCond");
-    LoadGlobal = M->getFunction("LoadGlobal");
-    LoadFast = M->getFunction("LoadFast");
-    StoreFast = M->getFunction("StoreFast");
-    UnaryPositive = M->getFunction("UnaryPositive");
-    UnaryNegative = M->getFunction("UnaryNegative");
-    UnaryNot = M->getFunction("UnaryNot");
-    UnaryInvert = M->getFunction("UnaryInvert");
-    CallFunction = M->getFunction("CallFunction");
-    
-    ToDouble = M->getFunction("ToDouble");
-    FromDouble = M->getFunction("FromDouble");
+    /*
+    ToDouble = TheJIT->getFunction("ToDouble");
+    FromDouble = TheJIT->getFunction("FromDouble");
+    */
 }
 
 inline Value *AsConstantPtr(PyObject *val)
@@ -129,6 +96,40 @@ bool Translate(PyFrameObject *frame) {
     std::stack<Block> blockStack;
 
     char *str = PyUnicode_AsUTF8(code->co_name);
+    Module *M = TheJIT->getModuleForNewFunction(str);
+
+    M->getOrInsertGlobal("_Py_TrueStruct", PyLongObjectTy);
+    M->getOrInsertGlobal("_Py_FalseStruct", PyLongObjectTy);
+
+    PyIncref = TheJIT->getFunction("PyIncref");
+    PyDecref = TheJIT->getFunction("PyDecref");
+    PyXDecref = TheJIT->getFunction("PyXDecref");
+    BinaryAdd = TheJIT->getFunction("BinaryAdd");
+    BinarySubtract = TheJIT->getFunction("BinarySubtract");
+    BinarySubscr = TheJIT->getFunction("BinarySubscr");
+    BinaryLshift = TheJIT->getFunction("BinaryLshift");
+    BinaryRshift = TheJIT->getFunction("BinaryRshift");
+    BinaryAnd = TheJIT->getFunction("BinaryAnd");
+    BinaryXor = TheJIT->getFunction("BinaryXor");
+    BinaryOr = TheJIT->getFunction("BinaryOr");
+    InplaceAdd = TheJIT->getFunction("InplaceAdd");
+    InplaceSubtract = TheJIT->getFunction("InplaceSubtract");
+    SequenceContains = TheJIT->getFunction("SequenceContains");
+    SequenceNotContains = TheJIT->getFunction("SequenceNotContains");
+    RichCompare = TheJIT->getFunction("RichCompare");
+    AsCond = TheJIT->getFunction("AsCond");
+    LoadGlobal = TheJIT->getFunction("LoadGlobal");
+    LoadFast = TheJIT->getFunction("LoadFast");
+    StoreFast = TheJIT->getFunction("StoreFast");
+    CallFunction = TheJIT->getFunction("CallFunction");
+	UnaryPositive = M->getFunction("UnaryPositive");
+	UnaryNegative = M->getFunction("UnaryNegative");
+	UnaryNot = M->getFunction("UnaryNot");
+	UnaryInvert = M->getFunction("UnaryInvert");
+
+    TrueCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_True), PyObjectPtrTy);
+    FalseCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_False), PyObjectPtrTy);
+
     Function *newFunc = Function::Create(funcType, Function::ExternalLinkage, str, M);
     // BasicBlock *BB = BasicBlock::Create(TheContext, "entry", newFunc);
     // Builder.SetInsertPoint(BB);
@@ -314,7 +315,7 @@ bool Translate(PyFrameObject *frame) {
             stack[stackDepth++] = Builder.CreateCall(InplaceSubtract, std::vector<Value *>{left, right});
             break;
         }
-        case UNARY_POSITIVE: {
+		case UNARY_POSITIVE: {
             Value *val = stack[--stackDepth];
             stack[stackDepth++] = Builder.CreateCall(UnaryPositive, std::vector<Value *>{val});
             break;
@@ -365,9 +366,7 @@ bool Translate(PyFrameObject *frame) {
     if (!flag) newFunc->eraseFromParent();
     else
     {
-        newFunc->dump();
-        fpm->run(*newFunc);
-        newFunc->dump();
+        //newFunc->dump();
     }
     return flag;
 }
@@ -386,6 +385,7 @@ bool TranslateSpecial(PyFrameObject *frame) {
     auto size = PyBytes_Size(code->co_code) / sizeof(_Py_CODEUNIT);
 
     char *str = PyUnicode_AsUTF8(code->co_name);
+    Module *M = TheJIT->getModuleForNewFunction(str);
     int len = strlen(str);
     char *prefix = new char[len + 20];
     strcpy(prefix, str);
@@ -455,8 +455,7 @@ bool TranslateSpecial(PyFrameObject *frame) {
     if (!flag) newFunc->eraseFromParent();
     else
     {
-        fpm->run(*newFunc);
-        newFunc->dump();
+        //newFunc->dump();
     }
     return flag;
 }

@@ -30,6 +30,10 @@
 #include "llvm/Support/DynamicLibrary.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
+#include "llvm/IR/LegacyPassManager.h"
+#include "llvm/Transforms/Scalar.h"
+#include "llvm/Transforms/Scalar/GVN.h"
+#include "llvm/Analysis/BasicAliasAnalysis.h"
 #include <algorithm>
 #include <memory>
 #include <string>
@@ -39,8 +43,9 @@
 typedef PyObject *(*JittedFunc)(PyFrameObject *);
 
 extern llvm::LLVMContext TheContext;
-extern llvm::IRBuilder<> Builder;
-extern std::unique_ptr<llvm::Module> TheModule;
+
+using namespace llvm;
+using namespace llvm::orc;
 
 namespace llvm {
 namespace orc {
@@ -48,29 +53,16 @@ namespace orc {
 class LlvmEnv {
     private:
         ExecutionEngine *EE;
+        std::unique_ptr<Module> OpenModule;
 
     public:
-        LlvmEnv() {
-            std::string errStr;
-            EE = EngineBuilder(std::move(TheModule))
-                .setErrorStr(&errStr)
-                .create();
-        }
+        LlvmEnv(std::unique_ptr<Module> module);
 
-        JittedFunc get(PyObject *name, bool special=false) {
-            char *str = PyUnicode_AsUTF8(name);
-            JittedFunc func;
-            if (special) {
-                int len = strlen(str);
-                char *prefix = new char[len + 20];
-                strcpy(prefix, str);
-                const char *suffix = "_special";
-                strcat(prefix, suffix);
-                func = (JittedFunc)EE->getFunctionAddress(prefix);
-            }
-            else func = (JittedFunc)EE->getFunctionAddress(str);
-            return func;
-        }
+        JittedFunc get(const std::string Name);
+        
+        Module *getModuleForNewFunction(const std::string Name);
+        
+        Function *getFunction(const std::string Name);
 };
 
 }

@@ -98,3 +98,6 @@ ENV/
 
 # vim swap files
 *.swp
+
+# llvm code
+*.ll

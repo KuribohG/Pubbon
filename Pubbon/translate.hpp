@@ -36,7 +36,7 @@ struct Block {
 	Block(int _type, int _handler, int _level): type(_type), handler(_handler), level(_level) { }
 };
 
-extern std::unique_ptr<LlvmEnv> TheJIT;
+extern LlvmEnv *TheJIT;
 
 void InitializeModule();
 
