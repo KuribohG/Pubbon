@@ -61,11 +61,7 @@ bool jit_compile(PyFrameObject *frame) {
         jittedCode->j_evalfunc = TheJIT->get(str);
         // jittedCode->j_evalstate = nullptr;
         printf("** Compiled @%s and succeeded!\n", PyUnicode_AsUTF8(code->co_name));
-        if (jittedCode->j_evalfunc) {
-            return true;
-        } else {
-            return false;
-        }
+        return true;
     }
     else
     {
