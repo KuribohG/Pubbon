@@ -40,6 +40,7 @@ Function *BinaryXor;
 Function *BinaryOr;
 Function *InplaceAdd;
 Function *InplaceSubtract;
+Function *StoreSubscr;
 Function *SequenceContains;
 Function *SequenceNotContains;
 Function *RichCompare;
@@ -58,7 +59,7 @@ Function *FromDouble;
 
 void InitializeModule() {
     SMDiagnostic err;
-    std::string source_file("/Users/zouyuheng/workspace/Pubbon/Pubbon/function.ll");
+    std::string source_file("/Users/zouyuheng/workspace/Pubbon/Pubbon/function.bc");
     TheModule = parseIRFile(source_file, err, TheContext);
     PyObjectTy = TheModule->getTypeByName("struct._object");
     PyObjectPtrTy = PyObjectTy->getPointerTo();
@@ -119,6 +120,7 @@ bool Translate(PyFrameObject *frame) {
     BinaryOr = TheJIT->getFunction("BinaryOr");
     InplaceAdd = TheJIT->getFunction("InplaceAdd");
     InplaceSubtract = TheJIT->getFunction("InplaceSubtract");
+    StoreSubscr = TheJIT->getFunction("StoreSubscr");
     SequenceContains = TheJIT->getFunction("SequenceContains");
     SequenceNotContains = TheJIT->getFunction("SequenceNotContains");
     RichCompare = TheJIT->getFunction("RichCompare");
@@ -330,6 +332,13 @@ bool Translate(PyFrameObject *frame) {
             Value *right = stack[--stackDepth];
             Value *left = stack[--stackDepth];
             stack[stackDepth++] = Builder.CreateCall(InplaceSubtract, std::vector<Value *>{left, right});
+            break;
+        }
+        case STORE_SUBSCR: {
+            Value *sub = stack[--stackDepth];
+            Value *container = stack[--stackDepth];
+            Value *v = stack[--stackDepth];
+            Builder.CreateCall(StoreSubscr, std::vector<Value *>{container, sub, v});
             break;
         }
 		case UNARY_POSITIVE: {

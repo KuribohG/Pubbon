@@ -90,9 +90,31 @@ PyObject *eval_frame(PyFrameObject *frame, int throwflag) {
     //printf("** name = %ls, argcount = %d, kwonlyargcount = %d, co_nlocals = %d\n", str, frame->f_code->co_argcount, frame->f_code->co_kwonlyargcount, frame->f_code->co_nlocals);
     //PyMem_Free(str);
 
-    PyObject *extra = nullptr;
+    PubbonJittedCode *extra = nullptr;
     _PyCode_GetExtra((PyObject *)frame->f_code, coIdx, (void **)&extra);
 
+    if (extra && !throwflag) {
+        //PubbonJittedCode *jitted = (PubbonJittedCode *)extra;
+
+        if (Py_TYPE(extra) == &PubbonJittedCode_Type && !extra->j_failed) {
+            if (extra->j_evalfunc != nullptr) {
+                return extra->j_evalfunc(frame);
+            }
+            else if (extra->j_run_count++ > HOT_CODE) {
+                if (jit_compile(frame)) {
+                    return extra->j_evalfunc(frame);
+                }
+                else extra->j_failed = true;
+            }
+        }
+    } else if (extra == nullptr) {
+        PubbonJittedCode *jitted = jittedcode_new_direct();
+        assert(jitted != nullptr);
+        _PyCode_SetExtra((PyObject *)frame->f_code, coIdx, (PyObject *)jitted);
+
+        jitted->j_run_count++;
+    }
+    /*
     if (extra == nullptr) {
         PubbonJittedCode *jitted = jittedcode_new_direct();
         assert(jitted != nullptr);
@@ -116,6 +138,7 @@ PyObject *eval_frame(PyFrameObject *frame, int throwflag) {
             }
         }
     }
+    */
     return _PyEval_EvalFrameDefault(frame, throwflag);
 }
 

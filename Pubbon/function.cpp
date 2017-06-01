@@ -118,6 +118,13 @@ extern "C" PyObject *InplaceSubtract(PyObject *left, PyObject *right) {
     return diff;
 }
 
+extern "C" void StoreSubscr(PyObject *container, PyObject *sub, PyObject *v) {
+    PyObject_SetItem(container, sub, v);
+    Py_DECREF(container);
+    Py_DECREF(sub);
+    Py_DECREF(v);
+}
+
 extern "C" PyObject *SequenceContains(PyObject *container, PyObject *sub) {
     PyObject *res = PySequence_Contains(container, sub) ? Py_True : Py_False;
     Py_INCREF(res);
