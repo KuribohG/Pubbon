@@ -39,7 +39,7 @@ Function *LlvmEnv::getFunction(const std::string Name) {
                 Function::ExternalLinkage, Name, OpenModule.get());
         return PF;
     }
-    return nullptr;
+    return PF;
 }
 
 }

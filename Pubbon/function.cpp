@@ -19,6 +19,23 @@ extern "C" void PyDecref(PyObject *obj) { Py_DECREF(obj); }
 
 extern "C" void PyXDecref(PyObject *obj) { Py_XDECREF(obj); }
 
+extern "C" PyObject *BinaryMultiply(PyObject *left, PyObject *right) {
+    PyObject *res;
+    res = PyNumber_Multiply(left, right);
+    Py_DECREF(left);
+    Py_DECREF(right);
+    return res;
+}
+
+extern "C" PyObject *BinaryModulo(PyObject *dividend, PyObject *divisor) {
+    PyObject *res;
+    if (PyUnicode_CheckExact(dividend) && (!PyUnicode_Check(divisor) || PyUnicode_CheckExact(divisor))) res = PyUnicode_Format(dividend, divisor);
+    else res = PyNumber_Remainder(dividend, divisor);
+    Py_DECREF(dividend);
+    Py_DECREF(divisor);
+    return res;
+}
+
 extern "C" PyObject *BinaryAdd(PyObject *left, PyObject *right) {
     PyObject *sum;
     if (PyUnicode_CheckExact(left) && PyUnicode_CheckExact(right)) sum = PyUnicode_Concat(left, right);

@@ -28,6 +28,8 @@ Value *TrueCnst, *FalseCnst;
 Function *PyIncref;
 Function *PyDecref;
 Function *PyXDecref;
+Function *BinaryMultiply;
+Function *BinaryModulo;
 Function *BinaryAdd;
 Function *BinarySubtract;
 Function *BinarySubscr;
@@ -78,7 +80,8 @@ void InitializeModule() {
 inline Value *AsConstantPtr(PyObject *val)
 {
     ConstantInt *addressInt = ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)val);
-    return ConstantExpr::getIntToPtr(addressInt, PyObjectPtrTy);
+    Value *ret = ConstantExpr::getIntToPtr(addressInt, PyObjectPtrTy);
+    return ret;
 }
 
 bool Translate(PyFrameObject *frame) {
@@ -104,6 +107,8 @@ bool Translate(PyFrameObject *frame) {
     PyIncref = TheJIT->getFunction("PyIncref");
     PyDecref = TheJIT->getFunction("PyDecref");
     PyXDecref = TheJIT->getFunction("PyXDecref");
+    BinaryMultiply = TheJIT->getFunction("BinaryMultiply");
+    BinaryModulo = TheJIT->getFunction("BinaryModulo");
     BinaryAdd = TheJIT->getFunction("BinaryAdd");
     BinarySubtract = TheJIT->getFunction("BinarySubtract");
     BinarySubscr = TheJIT->getFunction("BinarySubscr");
@@ -122,10 +127,10 @@ bool Translate(PyFrameObject *frame) {
     LoadFast = TheJIT->getFunction("LoadFast");
     StoreFast = TheJIT->getFunction("StoreFast");
     CallFunction = TheJIT->getFunction("CallFunction");
-	UnaryPositive = M->getFunction("UnaryPositive");
-	UnaryNegative = M->getFunction("UnaryNegative");
-	UnaryNot = M->getFunction("UnaryNot");
-	UnaryInvert = M->getFunction("UnaryInvert");
+	UnaryPositive = TheJIT->getFunction("UnaryPositive");
+	UnaryNegative = TheJIT->getFunction("UnaryNegative");
+	UnaryNot = TheJIT->getFunction("UnaryNot");
+	UnaryInvert = TheJIT->getFunction("UnaryInvert");
 
     TrueCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_True), PyObjectPtrTy);
     FalseCnst = ConstantExpr::getIntToPtr(ConstantInt::get(Type::getInt64Ty(TheContext), (int64_t)Py_False), PyObjectPtrTy);
@@ -253,6 +258,18 @@ bool Translate(PyFrameObject *frame) {
             Builder.CreateCall(PyDecref, std::vector<Value *>{left});
             Builder.CreateCall(PyDecref, std::vector<Value *>{right});
             stack[stackDepth++] = res;
+            break;
+        }
+        case BINARY_MULTIPLY: {
+            Value *right = stack[--stackDepth];
+            Value *left = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(BinaryMultiply, std::vector<Value*>{left, right});
+            break;
+        }
+        case BINARY_MODULO: {
+            Value *divisor = stack[--stackDepth];
+            Value *dividend = stack[--stackDepth];
+            stack[stackDepth++] = Builder.CreateCall(BinaryModulo, std::vector<Value *>{dividend, divisor});
             break;
         }
         case BINARY_ADD: {
